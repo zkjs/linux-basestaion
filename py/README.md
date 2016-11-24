@@ -27,4 +27,14 @@
 
 	sudo apt-get install libbluetooth-dev
 
-
+安装bluepy
+```shell
+#if neccesssary↓
+#sudo apt-get install python-pip libglib2.0-dev
+sudo pip install bluepy
+```
+安装mqtt client和paho-mqtt
+```shell
+sudo apt install mosquitto-clients
+sudo pip install paho-mqtt #--trusted-host http://pypi.douban.com/
+```
