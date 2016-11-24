@@ -1,0 +1,25 @@
+[station]
+alias = HospitalA
+
+[queue]
+position_l= 100
+cmd_l= 100
+call_l = 100
+
+[MQTT]
+server = 192.168.1.199
+port = 1883
+position_t = position
+cmd_t = cmd
+call_t = nursecall
+
+[BLE]
+
+[time]
+thread_cmd_sleep_time = 10.0
+thread_mqtt_loop_sleeptime = 10.0
+thread_mqtt_keepalive_time = 60
+thread_mqtt_sender_position_sleeptime = 5.0
+thread_mqtt_sender_call_sleeptime = 0
+thread_timer_control_blescan_flag_sleeptime = 10.0
+main_scanner_scantime = 1.0
