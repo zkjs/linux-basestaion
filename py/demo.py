@@ -11,8 +11,6 @@ import ConfigParser
 conf = ConfigParser.ConfigParser()
 conf.read('t.cnf')
 
-queueLock = threading.Lock() 
-
 POSITIONTITLE = conf.get("MQTT","position_t")
 CMDTITLE = conf.get("MQTT","cmd_t")
 CALLTITLE = conf.get("MQTT","call_t")
@@ -90,9 +88,7 @@ def on_connect(client,userdata,flags,rc):
 
 def on_message(client,userdata,msg):
 	if msg.topic == CMD_TITLE:
-		queueLock.acquire()
 		commandQ.put(str(msg.payload))
-		queueLock.release()
 
 class MqttSender(threading.Thread):
 	def __init__(self,threadID,name,title,q,sleeptime):
@@ -119,62 +115,18 @@ class MqttListener(threading.Thread):
 
 def senddata(threadName,title,q,sleeptime):
 	while True:
-		queueLock.acquire()
-		if not q.empty():
+		while not q.empty():
 			data = q.get()
 			client.publish(title,data)
-			queueLock.release()
-			print('get ...'+data )
-		else:
-			queueLock.release()
 		if sleeptime > 0:
 			time.sleep(sleeptime)
 
 def runcmd(threadName,q):
 	while True:
-		queueLock.acquire()
 		if not q.empty():
 			data= q.get()
 			print ("run cmd here " + data)
-		queueLock.release()
 		time.sleep(10.0)
-class BLEScanner(threading.Thread):
-	def __init__(self,threadID,name,q,title,Mhead,sleeptime):
-		threading.Thread.__init__(self)
-		self.threadID=threadID
-		self.name = name
-		self.q = q
-		self.title = title
-		self.sleeptime = sleeptime
-		self.Mhead = Mhead
-	def run(self):
-		scanBLE(self.name,self.q,self.title,self.Mhead,self.sleeptime)
-		print ('Scanning ... ')
-
-def scanBLE(threadName,q,title,Mhead,sleeptime):
-	scanner = Scanner().withDelegate(ScanDelegate())
-	while True:	
-		devices = scanner.scan(10.0)
-		bracelet_data=[]
-		result={}
-		for dev in devices:
-			data={}
-			data['addr']=dev.addr
-			data['rssi']=dev.rssi
-			try:
-				for (adtype,desc,value) in dev.getScanData():
-					data[desc]=value
-			except UnicodeDecodeError,e:
-				print 'get UnicodeDecodeError: %s ... Ignore' % (e,)
-			if (not data.has_key('Manufacturer')) or ( not data['Manufacturer'].startswith(Mhead)):
-				continue
-			bracelet_data.append(data)
-		result['BraceletResult']=bracelet_data
-		queueLock.acquire()
-		q.put(json.dumps(result))
-		#client.publish(title,json.dumps(result))
-		queueLock.release()
-		time.sleep(sleeptime)
 
 class MqttClient(threading.Thread):
 	def __init__(self,threadID,name,on_connect,on_message,server,port,alivetime,sleeptime):
@@ -195,30 +147,16 @@ class MqttClient(threading.Thread):
 			client.loop()
 			time.sleep(self.sleeptime)
 
-class timer(threading.Thread):
-	def __init__(self,threadID,name,sleeptime):
-		threading.Thread.__init__(self)
-		self.threadID = threadID
-		self.name = name
-		self.sleeptime = sleeptime
-	def run(self):
-		global positionFlag
-		while True:
-			if  not positionFlag:
-				positionFlag=True
-				time.sleep(self.sleeptime)
 		
 		
 Watcher()
-global positionFlag
-positionFlag=False
 mqttClientKeepAliveTime = int(conf.get('time','thread_mqtt_keepalive_time'))
 mqttClientLoopSleepTime = float(conf.get('time','thread_mqtt_loop_sleeptime'))
 cmdSleepTime = float(conf.get('time','thread_cmd_sleep_time'))
 positionSenderSleeptime = float(conf.get('time','thread_mqtt_sender_position_sleeptime'))
-callSenderSleeptime = float(conf.get('time','thread_mqtt_sender_call_sleeptime'))
-timerOfBlescanFlagSleeptime = float(conf.get('time','thread_timer_control_blescan_flag_sleeptime'))
 scannerScanTime = float(conf.get('time','main_scanner_scantime'))
+callPrefix = conf.get('BLE','call_manufacturer_prefix')
+braceletPrefix = conf.get('BLE','bracetlet_prefix')
 
 client = mqtt.Client(stationAlias)
 thread1 = MqttClient(1,'thread1',on_connect,on_message,MQTTServer,MQTTPort,mqttClientKeepAliveTime,mqttClientLoopSleepTime)
@@ -227,47 +165,44 @@ thread2 = MqttListener(2,'thread2',commandQ)
 thread2.start()
 thread3 = MqttSender(3,'thread3',POSITIONTITLE,positionQ,positionSenderSleeptime)
 thread3.start()
-thread4 = MqttSender(4,'thread4',CALLTITLE,callQ,callSenderSleeptime)
-thread4.start()
-#thread5 = BLEScanner(5,'thread5',positionQ,'position','00ff',5)
-#thread5.start()
-thread6 = timer(6,'thread6',timerOfBlescanFlagSleeptime)
-thread6.start()
 
 
 if __name__=='__main__':
 	callscanner = Scanner().withDelegate(ScanDelegate())
+	highestL = 0 
+	count =0
 	while True:
 		devices = callscanner.scan(scannerScanTime)
 		bracelet_data = []
 		result = {}
+		count +=1
 		for dev in devices:
 			data={}		
 			try:
 				for (adtype,desc,value) in dev.getScanData():
 					data[desc]=value
 			except UnicodeDecodeError,e:
-				print 'get UnicodeDecodeError: %s ... Ignore' % (e,)
+				pass
 			#00ff121382 normal／  00ff126682 call
-			if (not data.has_key('Manufacturer')) or ( not data['Manufacturer'].startswith('00ff12')):
+			if (not data.has_key('Manufacturer')) or ( not data['Manufacturer'].startswith(braceletPrefix)):
 				continue
 			data['addr'] = dev.addr
 			data['rssi'] = dev.rssi
 			
-			if data['Manufacturer'].startswith('00ff126682'):
+			if data['Manufacturer'].startswith(callPrefix):
 				#send to callQ now
 				callData=data
 				callData['time']=str(datetime.datetime.now())
 				callData['station']=stationAlias
 				callData['stationMac']=stationMac
-				callQ.put(json.dumps(callData))
+				print "\033[1;31;40m%s\033[0m" % (json.dumps(callData,))
+				client.publish(CALLTITLE,json.dumps(callData))
 			bracelet_data.append(data)
-		if positionFlag:
-			result['BraceletResult']=bracelet_data
-			result['time'] = str(datetime.datetime.now())
-			result['station'] = stationAlias
-			result['stationMac'] = stationMac
-			queueLock.acquire()
-			positionQ.put(json.dumps(result))
-			queueLock.release()
-			positionFlag=False
+			
+		result['BraceletResult']=bracelet_data
+		result['time'] = str(datetime.datetime.now())
+		result['station'] = stationAlias
+		result['stationMac'] = stationMac
+		result['num']=count
+		print json.dumps(result)
+		positionQ.put(json.dumps(result))
