@@ -9,7 +9,7 @@ import uuid
 import ConfigParser
 
 conf = ConfigParser.ConfigParser()
-conf.read('t2.cnf')
+conf.read('t.cnf')
 
 POSITIONTITLE = conf.get("MQTT","position_t")
 CMDTITLE = conf.get("MQTT","cmd_t")
