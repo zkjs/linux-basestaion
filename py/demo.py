@@ -9,11 +9,12 @@ import uuid
 import ConfigParser
 
 conf = ConfigParser.ConfigParser()
-conf.read('t.cnf')
+conf.read('t2.cnf')
 
 POSITIONTITLE = conf.get("MQTT","position_t")
 CMDTITLE = conf.get("MQTT","cmd_t")
 CALLTITLE = conf.get("MQTT","call_t")
+COMMONTITLE = conf.get("MQTT","common_t")
 PositionQueueLength = int(conf.get("queue",'position_l'))
 CommandQueueLength = int(conf.get("queue",'cmd_l'))
 CallQueueLength = int(conf.get("queue","call_l"))
@@ -33,6 +34,13 @@ def get_mac_address():
     mac=uuid.UUID(int = uuid.getnode()).hex[-12:] 
     return ":".join([mac[e:e+2] for e in range(0,11,2)])
 stationMac = get_mac_address()
+def defined(x):
+	try :
+		type(eval(x))
+	except:
+		return False
+	else:
+		return True
 class Watcher:
     """this class solves two problems with multithreaded 
     programs in Python, (1) a signal might be delivered 
@@ -155,8 +163,10 @@ mqttClientLoopSleepTime = float(conf.get('time','thread_mqtt_loop_sleeptime'))
 cmdSleepTime = float(conf.get('time','thread_cmd_sleep_time'))
 positionSenderSleeptime = float(conf.get('time','thread_mqtt_sender_position_sleeptime'))
 scannerScanTime = float(conf.get('time','main_scanner_scantime'))
-callPrefix = conf.get('BLE','call_manufacturer_prefix')
-braceletPrefix = conf.get('BLE','bracetlet_prefix')
+callFlag= conf.get('BLE','call_manufacturer_flag')
+braceletFlag= conf.get('BLE','bracetlet_flag')
+outbodyFlag = conf.get('BLE','outbody_manufacturer_flag')
+positionFlag= conf.get('BLE','position_manufacturer_flag')
 
 client = mqtt.Client(stationAlias)
 thread1 = MqttClient(1,'thread1',on_connect,on_message,MQTTServer,MQTTPort,mqttClientKeepAliveTime,mqttClientLoopSleepTime)
@@ -168,14 +178,17 @@ thread3.start()
 
 
 if __name__=='__main__':
+	lastProcessTime = time.time() 
 	callscanner = Scanner().withDelegate(ScanDelegate())
-	highestL = 0 
 	count =0
 	while True:
 		devices = callscanner.scan(scannerScanTime)
+		timestamp = time.time()
 		bracelet_data = []
 		result = {}
 		count +=1
+		callSentFlag = False
+		outbodySentFlag = False
 		for dev in devices:
 			data={}		
 			try:
@@ -184,25 +197,40 @@ if __name__=='__main__':
 			except UnicodeDecodeError,e:
 				pass
 			#00ff121382 normal／  00ff126682 call
-			if (not data.has_key('Manufacturer')) or ( not data['Manufacturer'].startswith(braceletPrefix)):
+			if (not data.has_key('Manufacturer')) or ( not data['Manufacturer'].startswith(braceletFlag)):
+				devices.remove(dev)
 				continue
 			data['addr'] = dev.addr
 			data['rssi'] = dev.rssi
-			
-			if data['Manufacturer'].startswith(callPrefix):
-				#send to callQ now
+			data['bsid'] = stationAlias
+			data['stationMac'] = stationMac
+			data['timestamp'] = timestamp
+			data['bcid'] = data['Manufacturer'][8:16]
+			data['data'] = int(data['Manufacturer'][4:],16)
+
+			if data['Manufacturer'].startswith(callFlag,6):
 				callData=data
-				callData['time']=str(datetime.datetime.now())
-				callData['station']=stationAlias
-				callData['stationMac']=stationMac
+				callData['nursecall'] = True
 				print "\033[1;31;40m%s\033[0m" % (json.dumps(callData,))
 				client.publish(CALLTITLE,json.dumps(callData))
+				callSendFlag = True
+				continue
+			if data['Manufacturer'].startswith(outbodyFlag,6):
+				outbodyData = data
+				client.publish(COMMONTITLE,json.dumps(outbodyData))
+				outbodySentFlag = True
+				continue
 			bracelet_data.append(data)
 			
-		result['BraceletResult']=bracelet_data
-		result['time'] = str(datetime.datetime.now())
-		result['station'] = stationAlias
-		result['stationMac'] = stationMac
-		result['num']=count
-		print json.dumps(result)
-		positionQ.put(json.dumps(result))
+		if len(bracelet_data) > 0:
+			result = bracelet_data
+			print json.dumps(result)
+			positionQ.put(json.dumps(result))
+			lastProcessTime = timestamp
+		elif len(bracelet_data) == 0 and (not callSentFlag )and (not outbodySentFlag) :
+			now = time.time()
+			if now - lastProcessTime  > 30 :
+				result={"status":0,"bsid":stationAlias,"timestamp":now}
+				print "send common: %s "%  (json.dumps(result),)
+				client.publish(COMMONTITLE,json.dumps(result))
+				lastProcessTime = now
