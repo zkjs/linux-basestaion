@@ -27,13 +27,17 @@ else:
 positionQ= Queue.Queue(PositionQueueLength)
 commandQ = Queue.Queue(CommandQueueLength)
 callQ = Queue.Queue(CallQueueLength)
+global stationAlias
 stationAlias=conf.get('station','alias')
 threads=[]
 threadID=1
+global lastDiscoveryTime
 def get_mac_address(): 
     mac=uuid.UUID(int = uuid.getnode()).hex[-12:] 
     return ":".join([mac[e:e+2] for e in range(0,11,2)])
+global stationMac 
 stationMac = get_mac_address()
+
 def defined(x):
 	try :
 		type(eval(x))
@@ -83,12 +87,42 @@ class Watcher:
 class ScanDelegate(DefaultDelegate):
         def __init__(self):
                 DefaultDelegate.__init__(self)
-                def handleDiscovery(self, dev, isNewDev, isNewData):
-                        if isNewDev:
-                                print "Discovered device", dev.addr
-                        elif isNewData:
-                                print "Received new data from", dev.addr
+	def handleDiscovery(self, dev, isNewDev, isNewData):
+		global stationAlias,stationMac
+		data = {}
+		timestamp = time.time()
+		global lastDiscoveryTime
+		try:
+			for (adtype,desc,value) in dev.getScanData():
+				data[desc]=value
+		except UnicodeDecodeError,e:
+			pass
+		#00ff121382 normal／  00ff126682 call
+		if (not data.has_key('Manufacturer')) or ( not data['Manufacturer'].startswith(braceletFlag)):
+			return 0
+		data['addr'] = dev.addr
+		data['rssi'] = dev.rssi
+		data['bsid'] = stationAlias
+		data['stationMac'] = stationMac
+		data['timestamp'] = timestamp
+		data['bcid'] = int(data['Manufacturer'][8:16],16)
+		data['data'] = data['Manufacturer'][4:]
 
+		if data['Manufacturer'].startswith(callFlag,6):
+			callData=data
+			callData['nursecall'] = True
+			print "\033[1;31;40m%s\033[0m" % (json.dumps(callData,))
+			client.publish(CALLTITLE,json.dumps(callData))
+			lastDiscoveryTime = time.time()
+			return 0	
+		elif data['Manufacturer'].startswith(outbodyFlag,6):
+			outbodyData = data
+			client.publish(COMMONTITLE,json.dumps(outbodyData))
+			lastDiscoveryTime = time.time()
+			return 0
+		positionQ.put(json.dumps(data))
+		print json.dumps(data)
+		lastDiscvoeryTime = time.time()
 
 def on_connect(client,userdata,flags,rc):
 	client.subscribe(CMDTITLE)
@@ -176,61 +210,16 @@ thread2.start()
 thread3 = MqttSender(3,'thread3',POSITIONTITLE,positionQ,positionSenderSleeptime)
 thread3.start()
 
-
 if __name__=='__main__':
-	lastProcessTime = time.time() 
+	global lastDiscoveryTime
+	lastDiscoveryTime=0
 	callscanner = Scanner().withDelegate(ScanDelegate())
 	count =0
 	while True:
 		devices = callscanner.scan(scannerScanTime)
-		timestamp = time.time()
-		bracelet_data = []
-		result = {}
-		count +=1
-		callSentFlag = False
-		outbodySentFlag = False
-		for dev in devices:
-			data={}		
-			try:
-				for (adtype,desc,value) in dev.getScanData():
-					data[desc]=value
-			except UnicodeDecodeError,e:
-				pass
-			#00ff121382 normal／  00ff126682 call
-			if (not data.has_key('Manufacturer')) or ( not data['Manufacturer'].startswith(braceletFlag)):
-				devices.remove(dev)
-				continue
-			data['addr'] = dev.addr
-			data['rssi'] = dev.rssi
-			data['bsid'] = stationAlias
-			data['stationMac'] = stationMac
-			data['timestamp'] = timestamp
-			data['bcid'] = data['Manufacturer'][8:16]
-			data['data'] = int(data['Manufacturer'][4:],16)
-
-			if data['Manufacturer'].startswith(callFlag,6):
-				callData=data
-				callData['nursecall'] = True
-				print "\033[1;31;40m%s\033[0m" % (json.dumps(callData,))
-				client.publish(CALLTITLE,json.dumps(callData))
-				callSendFlag = True
-				continue
-			if data['Manufacturer'].startswith(outbodyFlag,6):
-				outbodyData = data
-				client.publish(COMMONTITLE,json.dumps(outbodyData))
-				outbodySentFlag = True
-				continue
-			bracelet_data.append(data)
-			
-		if len(bracelet_data) > 0:
-			result = bracelet_data
-			print json.dumps(result)
-			positionQ.put(json.dumps(result))
-			lastProcessTime = timestamp
-		elif len(bracelet_data) == 0 and (not callSentFlag )and (not outbodySentFlag) :
-			now = time.time()
-			if now - lastProcessTime  > 30 :
-				result={"status":0,"bsid":stationAlias,"timestamp":now}
-				print "send common: %s "%  (json.dumps(result),)
-				client.publish(COMMONTITLE,json.dumps(result))
-				lastProcessTime = now
+		now = time.time()
+		if now - lastDiscoveryTime  > 30 :
+			result={"status":0,"bsid":stationAlias,"timestamp":now}
+			print "send common: %s " % (json.dumps(result),)
+			client.publish(COMMONTITLE,json.dumps(result))
+			lastDiscoveryTime = now
