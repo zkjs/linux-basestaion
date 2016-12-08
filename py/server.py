@@ -33,8 +33,8 @@ if s is None:
 def SocketServer():
     try:
         while True:
-        conn, addr = s.accept()
-        print 'Connected by', addr
+            conn, addr = s.accept()
+            print 'Connected by', addr
 #while 1:
             while True:
                 data = conn.recv(1024)
