@@ -193,7 +193,7 @@ class ScanDelegate(DefaultDelegate):
                 for e in newBinData:
                     arrs.append(str(e))
                     #arrs.append(str(struct.unpack('B', e[0])[0]))
-                print('-'.join(arrs))
+                #print('-'.join(arrs))
                 #newBinData = base64.b16decode(newdata)
 		#print "send bin data: %s, last %s" % (newBinData,checksum(BinData))
 		#send to where
@@ -204,6 +204,7 @@ class ScanDelegate(DefaultDelegate):
                     #s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
                     #s.connect((socketHost, socketPort))
                     s.sendall(newBinData)
+                    print('-'.join(arrs))
                     #s.close()
                 except socket.error as msg:
                     #s.close()
@@ -344,10 +345,13 @@ if __name__=='__main__':
 	count =0
 	
 	while True:
-		devices = callscanner.scan(scannerScanTime)
-		now = time.time()
-		if now - lastDiscoveryTime  > 30 :
-			result={"status":0,"bsid":stationAlias,"timestamp":now}
-			print "send common: %s " % (json.dumps(result),)
-			client.publish(COMMONTITLE,json.dumps(result))
-			lastDiscoveryTime = now
+            try:
+                devices = callscanner.scan(scannerScanTime)
+		#now = time.time()
+		#if now - lastDiscoveryTime  > 30 :
+		#	result={"status":0,"bsid":stationAlias,"timestamp":now}
+		#	print "send common: %s " % (json.dumps(result),)
+		#	client.publish(COMMONTITLE,json.dumps(result))
+		#	lastDiscoveryTime = now
+            except:
+                time.sleep(5)

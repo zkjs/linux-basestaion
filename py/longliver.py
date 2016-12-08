@@ -16,28 +16,30 @@ LAST_BLE_RESP = 0 #the last bluetooth signal time;
 #default setting
 host = '47.88.15.107'
 port = 8555
-#global sock
+global sock
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#global recon_count
+global recon_count
 recon_count = 0
 #socket creater
 def do_connect():
 #    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     #global sock
     try:
+#        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((host, port))
         sock.setblocking(0)
     except socket.error as msg:
         print(msg)
 def reconnect():
-    #global recon_count
-    #global sock
+    global recon_count
+    global sock
     recon_count += 1
-    if recon_count > 10:
+    if recon_count > 3:
         recon_count = 0
         sock.close()
         time.sleep(5)
         try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((host, port))
         except socket.error as msg:
             print(msg)
