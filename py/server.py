@@ -28,22 +28,28 @@ for res in socket.getaddrinfo(HOST, PORT, socket.AF_UNSPEC,
 if s is None:
     print 'could not open socket'
     sys.exit(1)
-global conn
-global addr
-conn, addr = s.accept()
-print 'Connected by', addr
-while 1:
-    data = conn.recv(1024)
-    if data:
-    #if not data: break
-    #conn.send(data)
-        arrs = []
-        for e in data:
-            arrs.append(str(struct.unpack('B', e[0])[0]))
-        print('-'.join(arrs))
-    else:
-        conn.close()
+#global conn
+#global addr
+def SocketServer():
+    try:
+        while True:
         conn, addr = s.accept()
-
+        print 'Connected by', addr
+#while 1:
+            while True:
+                data = conn.recv(1024)
+    #if data:
+                if not data: break
+    #conn.send(data)
+                arrs = []
+                for e in data:
+                    arrs.append(str(struct.unpack('B', e[0])[0]))
+                print('-'.join(arrs))
+    #else:
+            conn.close()
+    #conn, addr = s.accept()
+    except Exception,ex:
+        print ex
     #print('%s' % data)
 #conn.close()
+SocketServer()

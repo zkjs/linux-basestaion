@@ -14,17 +14,34 @@ INIT_TS = int(time.time()) #the begin ts of the script
 LAST_MQTT_RESP = 0 #the last mqtt response time;
 LAST_BLE_RESP = 0 #the last bluetooth signal time;
 #default setting
-host = '192.168.43.150'
+host = '47.88.15.107'
 port = 8555
+#global sock
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#global recon_count
+recon_count = 0
 #socket creater
 def do_connect():
 #    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #global sock
     try:
         sock.connect((host, port))
         sock.setblocking(0)
     except socket.error as msg:
         print(msg)
+def reconnect():
+    #global recon_count
+    #global sock
+    recon_count += 1
+    if recon_count > 10:
+        recon_count = 0
+        sock.close()
+        time.sleep(5)
+        try:
+            sock.connect((host, port))
+        except socket.error as msg:
+            print(msg)
+
 
 #states checker
 def mqtt_checker():
@@ -77,7 +94,9 @@ bs_mac = '010000000000'
 rssi = '01' #-44 measured rssi
 battery = '01' #percent 
 temp = '01' 
-for i in range(1,3):
+#for i in range(1,3):
+while True:
+    #global sock
 #    main_process()
 #    generate data
     key=bytearray.fromhex('fefe%s%s%s%s%s%s%s' % (flag, bc_mac, bc_ip, bs_mac, rssi, battery, temp))
@@ -91,9 +110,14 @@ for i in range(1,3):
         arrs.append(str(e))
     print('-'.join(arrs))
     try:
+        #global sock
+        #global recon_count
         sock.send(key)
     except socket.error as msg:
-        print(msg)
+        print('%s(%s)' % (msg, recon_count))
+        reconnect()
+    time.sleep(6)
 
+#sock.close()
 #data = sock.recv(1024)
 #print('res: %s' % data)
