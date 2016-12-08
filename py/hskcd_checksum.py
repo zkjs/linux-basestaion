@@ -1,4 +1,4 @@
-#-*- encoding=ytf-8 -*-
+#-*- encoding=utf-8 -*-
 #ganben @tripp lilley
 #for generate octet checksum for hskcd project
 

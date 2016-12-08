@@ -32,4 +32,5 @@ while 1:
     data = conn.recv(1024)
     if not data: break
     conn.send(data)
+    print('%s' % data)
 conn.close()
