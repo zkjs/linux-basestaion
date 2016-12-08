@@ -3,6 +3,8 @@
 # Echo server program
 import socket
 import sys
+import time
+import struct
 
 HOST = None               # Symbolic name meaning all available interfaces
 PORT = 8555              # Arbitrary non-privileged port
@@ -17,7 +19,7 @@ for res in socket.getaddrinfo(HOST, PORT, socket.AF_UNSPEC,
         continue
     try:
         s.bind(sa)
-        s.listen(1)
+        s.listen(10)
     except socket.error as msg:
         s.close()
         s = None
@@ -26,11 +28,22 @@ for res in socket.getaddrinfo(HOST, PORT, socket.AF_UNSPEC,
 if s is None:
     print 'could not open socket'
     sys.exit(1)
+global conn
+global addr
 conn, addr = s.accept()
 print 'Connected by', addr
 while 1:
     data = conn.recv(1024)
-    if not data: break
-    conn.send(data)
-    print('%s' % data)
-conn.close()
+    if data:
+    #if not data: break
+    #conn.send(data)
+        arrs = []
+        for e in data:
+            arrs.append(str(struct.unpack('B', e[0])[0]))
+        print('-'.join(arrs))
+    else:
+        conn.close()
+        conn, addr = s.accept()
+
+    #print('%s' % data)
+#conn.close()

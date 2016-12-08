@@ -14,14 +14,17 @@ INIT_TS = int(time.time()) #the begin ts of the script
 LAST_MQTT_RESP = 0 #the last mqtt response time;
 LAST_BLE_RESP = 0 #the last bluetooth signal time;
 #default setting
-host = '47.88.15.107'
+host = '192.168.43.150'
 port = 8555
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 #socket creater
 def do_connect():
 #    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((host, port))
-    sock.setblocking(0)
+    try:
+        sock.connect((host, port))
+        sock.setblocking(0)
+    except socket.error as msg:
+        print(msg)
 
 #states checker
 def mqtt_checker():
@@ -68,12 +71,12 @@ do_connect()
 #LOOP4EVER: main
 #sample 0xfefe 01 111213141516 14131211
 flag = '01' # 01 heartbeat position, 02 alarm, 03 off wrist
-bc_mac = 'aa2a3a4b5b6b'
-bc_ip = ''.join((format(222,'x'), format(222,'x'), format(222, 'x'), format(222,'x'))) 
-bs_mac = '1b2b3b1a2a3a'
-rssi = '44' #-44 measured rssi
-battery = '99' #percent 
-temp = '20' 
+bc_mac = '010000000000'
+bc_ip = ''.join(('{:02x}'.format(01,'x'), '{:02x}'.format(0,'x'), '{:02x}'.format(00, 'x'), '{:02x}'.format(00,'x'))) 
+bs_mac = '010000000000'
+rssi = '01' #-44 measured rssi
+battery = '01' #percent 
+temp = '01' 
 for i in range(1,3):
 #    main_process()
 #    generate data
@@ -83,8 +86,14 @@ for i in range(1,3):
     #key = pack('hhb', key, checksum(key))
     print('len %s and end: %s' % (len(key), key[-1]))
     print('sending %s' % key)
+    arrs = []
     for e in key:
-        print(e)
-    sock.send(key)
-data = sock.recv(1024)
-print('res: %s' % data)
+        arrs.append(str(e))
+    print('-'.join(arrs))
+    try:
+        sock.send(key)
+    except socket.error as msg:
+        print(msg)
+
+#data = sock.recv(1024)
+#print('res: %s' % data)

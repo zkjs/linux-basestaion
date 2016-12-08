@@ -31,6 +31,8 @@ positionQ= Queue.Queue(PositionQueueLength)
 commandQ = Queue.Queue(CommandQueueLength)
 callQ = Queue.Queue(CallQueueLength)
 global stationAlias
+global reconnect_count
+
 stationAlias=conf.get('station','alias')
 threads=[]
 threadID=1
@@ -80,11 +82,17 @@ def defined(x):
 		return True
 def get_ip_address(ifname):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    return socket.inet_ntoa(fcntl.ioctl(
+    #try to avoid net drop exceptions
+    try: 
+        res = socket.inet_ntoa(fcntl.ioctl(
         s.fileno(),
         0x8915,  # SIOCGIFADDR
         struct.pack('256s', ifname[:15])
     )[20:24])
+    except:
+        res = '127.0.0.1'
+    return res
+
 class Watcher:
     """this class solves two problems with multithreaded 
     programs in Python, (1) a signal might be delivered 
@@ -124,6 +132,22 @@ class Watcher:
         except OSError: pass
 
 
+def reconnect():
+    #count reconnect counts, if bigger than 200, do reconn
+    global reconnect_count
+    global s
+    reconnect_count += 1
+    if reconnect_count>= 50:
+        reconnect_count = 0
+        try:
+            s.close()
+        except socket.error as msg:
+            print(msg)
+        try:
+            s.connect((socketHost,socketPort))
+        except socket.error as msg:
+            print(msg)
+
 class ScanDelegate(DefaultDelegate):
         def __init__(self):
                 DefaultDelegate.__init__(self)
@@ -149,26 +173,39 @@ class ScanDelegate(DefaultDelegate):
 		data['bcid'] = int(data['Manufacturer'][8:16],16)
 		data['data'] = data['Manufacturer'][4:]
 		#battery+station ip
-		electricity = data['Manufacturer'][16:18]
-		flag = data['Manufacturer'][6:8]
+		#electricity = data['Manufacturer'][16:18]
+		electricity = '64' #fixed
+                flag = data['Manufacturer'][6:8]
 		local_ip = get_ip_address('wlan0')
 		hex_ip = ''.join([hex(int(i)).lstrip('0x').rjust(2,'0') for i in local_ip.split('.')])
 		temp = 50
 	
 		#newdata = '%s%s%s%s%s%s' % (data['bcid'],stationAlias,stationMac,dev.addr,flag, electricity)
 		#那拼数据，从包头到温度，ip转十六进制，然后整一串儿倒二进制，最后末端插一位校验和，就成了
-		newdata = '%s%s%s%s%s%s' % (stationMac,hex_ip,dev.addr.replace(':',''),hex(dev.rssi*(-1)).lstrip('0x').rjust(2,'0'),electricity,hex(temp).lstrip('0x').rjust(2,'0'))
-		print "stationMac: %s local_ip: %s(%s) bcid:%s ,rssi:%s, electricity:%s, temp:%s" % (stationMac,hex_ip,local_ip,dev.addr.replace(':',''),hex(dev.rssi*(-1)),electricity,hex(temp))
-		print "assem data: %s " % (newdata,)
+		newdata = 'fefe%s%s%s%s%s%s%s' % (flag,stationMac,hex_ip,dev.addr.replace(':',''),hex(dev.rssi*(-1)).lstrip('0x').rjust(2,'0'),electricity,hex(temp).lstrip('0x').rjust(2,'0'))
+		#print "stationMac: %s local_ip: %s(%s) bcid:%s ,rssi:%s, electricity:%s, temp:%s" % (stationMac,hex_ip,local_ip,dev.addr.replace(':',''),hex(dev.rssi*(-1)),electricity,hex(temp))
+		#print "assem data: %s " % (newdata,)
 		BinData = bytearray.fromhex(newdata)
-		print "after to bin:%s" % (BinData,)
+		#print "after to bin:%s" % (BinData,)
 		newBinData= BinData+checksum(BinData)
-		#newBinData = base64.b16decode(newdata)
-		print "send bin data: %s, last %s" % (newBinData,checksum(BinData))
+		arrs=[]
+                for e in newBinData:
+                    arrs.append(str(e))
+                    #arrs.append(str(struct.unpack('B', e[0])[0]))
+                print('-'.join(arrs))
+                #newBinData = base64.b16decode(newdata)
+		#print "send bin data: %s, last %s" % (newBinData,checksum(BinData))
 		#send to where
-		s.sendall(newBinData)
-		rc = s.recv(1024)
-		print rc
+                try:
+                    s.sendall(newBinData)
+                except socket.error as msg:
+                    #s.close()
+                    global reconnect_count
+                    print('%s(%s)' % (msg, reconnect_count))
+                    reconnect()
+
+		#rc = s.recv(1024)
+		#print rc
 
 		if data['Manufacturer'].startswith(callFlag,6):
 			callData=data
@@ -288,7 +325,13 @@ if __name__=='__main__':
 	global lastDiscoveryTime
 	global s
 	s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-	s.connect((socketHost,socketPort))
+        try:
+            s.connect((socketHost,socketPort))
+            s.setblocking(0)
+        except socket.error as msg:
+            print(msg)
+        reconnect_count = 0
+
 	lastDiscoveryTime=0
 	callscanner = Scanner().withDelegate(ScanDelegate())
 	count =0

@@ -15,8 +15,8 @@ common_t = common
 call_t = nursecall
 
 [SOCKET]
-host = 192.168.1.106
-port = 50007
+host = 47.88.15.107
+port = 8555
 
 
 [BLE]
