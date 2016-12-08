@@ -29,8 +29,8 @@
 
 安装bluepy
 ```shell
-#if neccesssary↓
-#sudo apt-get install python-pip libglib2.0-dev
+#python-pip if neccesssary↓
+sudo apt-get install python-pip libglib2.0-dev
 sudo pip install bluepy
 ```
 安装mqtt client和paho-mqtt
