@@ -5,7 +5,7 @@ import socket
 import sys
 import time
 import struct
-
+import SocketServer
 HOST = None               # Symbolic name meaning all available interfaces
 PORT = 8555              # Arbitrary non-privileged port
 s = None
@@ -52,4 +52,21 @@ def SocketServer():
         print ex
     #print('%s' % data)
 #conn.close()
-SocketServer()
+#SocketServer()i
+class MyTCPHandler(SocketServer.BaseRequestHandler):
+    """
+    The request handler class for our server.
+
+    It is instantiated once per connection to the server, and must
+    override the handle() method to implement communication to the
+    client.
+    """
+
+    def handle(self):
+        # self.request is the TCP socket connected to the client
+        self.data = self.request.recv(1024).strip()
+        print "{} wrote:".format(self.client_address[0])
+
+if __name__ == "__main__":
+    server = SocketServer.TCPServer((HOST, PORT), MyTCPHandler)
+    server.serve_forever()
