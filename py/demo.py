@@ -7,6 +7,9 @@ import json
 from bluepy.btle import Scanner,DefaultDelegate
 import uuid
 import ConfigParser
+import socket
+import fcntl
+import struct
 
 conf = ConfigParser.ConfigParser()
 conf.read('t.cnf')
@@ -34,7 +37,7 @@ threadID=1
 global lastDiscoveryTime
 def get_mac_address(): 
     mac=uuid.UUID(int = uuid.getnode()).hex[-12:] 
-    return ":".join([mac[e:e+2] for e in range(0,11,2)])
+    return "".join([mac[e:e+2] for e in range(0,11,2)])
 global stationMac 
 stationMac = get_mac_address()
 
@@ -45,6 +48,13 @@ def defined(x):
 		return False
 	else:
 		return True
+def get_ip_address(ifname):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    return socket.inet_ntoa(fcntl.ioctl(
+        s.fileno(),
+        0x8915,  # SIOCGIFADDR
+        struct.pack('256s', ifname[:15])
+    )[20:24])
 class Watcher:
     """this class solves two problems with multithreaded 
     programs in Python, (1) a signal might be delivered 
@@ -107,6 +117,18 @@ class ScanDelegate(DefaultDelegate):
 		data['timestamp'] = timestamp
 		data['bcid'] = int(data['Manufacturer'][8:16],16)
 		data['data'] = data['Manufacturer'][4:]
+		#battery+station ip
+		electricity = data['Manufacturer'][16:18]
+		flag = data['Manufacturer'][6:8]
+		local_ip = get_ip_address('wlan0')
+		temp = 50
+	
+		newdata = '%s%s%s%s%s%s' % (data['bcid'],stationAlias,stationMac,dev.addr,flag, electricity)
+		newdata = '%s%s%s%s%s%s' % (stationMac,local_ip,dev.addr,dev.rssi,electricity,temp)
+		print "stationMac: %s local_ip: %s bcid:%s ,rssi:%s, electricity:%s, temp:%s" % (stationMac,local_ip,dev.addr,dev.rssi,electricity,temp)
+		newBinData = bytearray.fromhex(newdata)
+		#newBinData = base64.b16decode(newdata)
+		print newBinData
 
 		if data['Manufacturer'].startswith(callFlag,6):
 			callData=data
@@ -121,8 +143,8 @@ class ScanDelegate(DefaultDelegate):
 			lastDiscoveryTime = time.time()
 			return 0
 		positionQ.put(json.dumps(data))
-		print json.dumps(data)
-		lastDiscvoeryTime = time.time()
+		#print json.dumps(data)
+		lastDiscoveryTime = time.time()
 
 def on_connect(client,userdata,flags,rc):
 	client.subscribe(CMDTITLE)
