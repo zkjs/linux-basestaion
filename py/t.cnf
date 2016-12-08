@@ -14,6 +14,10 @@ cmd_t = cmd
 common_t = common
 call_t = nursecall
 
+[SOCKET]
+host = 192.168.1.106
+port = 50007
+
 
 [BLE]
 bracetlet_flag= 00ff
