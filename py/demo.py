@@ -137,13 +137,14 @@ def reconnect():
     global reconnect_count
     global s
     reconnect_count += 1
-    if reconnect_count>= 50:
+    if reconnect_count>= 2:
         reconnect_count = 0
         try:
             s.close()
         except socket.error as msg:
             print(msg)
         try:
+            s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
             s.connect((socketHost,socketPort))
         except socket.error as msg:
             print(msg)
@@ -197,7 +198,13 @@ class ScanDelegate(DefaultDelegate):
 		#print "send bin data: %s, last %s" % (newBinData,checksum(BinData))
 		#send to where
                 try:
+                    #re-use present socket link;
+                    #rather than close and open a new socket;
+                    #this is only happen every 50 fails 
+                    #s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+                    #s.connect((socketHost, socketPort))
                     s.sendall(newBinData)
+                    #s.close()
                 except socket.error as msg:
                     #s.close()
                     global reconnect_count

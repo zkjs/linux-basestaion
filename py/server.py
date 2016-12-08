@@ -68,10 +68,13 @@ class MyTCPHandler(SocketServer.BaseRequestHandler):
         # self.request is the TCP socket connected to the client
         self.data = self.request.recv(1024).strip()
         print "{} wrote:".format(self.client_address[0])
-        arrs = []
-        for e in self.data:
-            arrs.append(str(struct.unpack('B', e[0])[0]))
-        print('-'.join(arrs))
+        while True:
+            self.data = self.request.recv(1024).strip() 
+            if not self.data: break
+            arrs = []
+            for e in self.data:
+                arrs.append(str(struct.unpack('B', e[0])[0]))
+            print('-'.join(arrs))
 
 if __name__ == "__main__":
     server = SocketServer.TCPServer((HOST, PORT), MyTCPHandler)
