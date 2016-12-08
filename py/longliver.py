@@ -20,8 +20,11 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 #socket creater
 def do_connect():
 #    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((host, port))
-    sock.setblocking(0)
+    try:
+        sock.connect((host, port))
+        sock.setblocking(0)
+    except socket.error as msg:
+        print(msg)
 
 #states checker
 def mqtt_checker():
@@ -83,8 +86,15 @@ for i in range(1,3):
     #key = pack('hhb', key, checksum(key))
     print('len %s and end: %s' % (len(key), key[-1]))
     print('sending %s' % key)
+    arrs = []
     for e in key:
-        print(e)
-    sock.send(key)
-data = sock.recv(1024)
-print('res: %s' % data)
+        arrs.append(str(e))
+    print('-'.join(arrs))
+    
+    try:
+        sock.send(key)
+    except socket.error as msg:
+        print(msg)
+
+#data = sock.recv(1024)
+#print('res: %s' % data)
