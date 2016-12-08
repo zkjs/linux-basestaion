@@ -130,7 +130,7 @@ def on_connect(client,userdata,flags,rc):
 
 def on_disconnect(client, userdata, rc):      
 	while rc != 0:
-	 	sleep(RECONNECT_DELAY_SECS)
+	 	sleep(2)
 		print "Reconnecting..."
 		rc = client.reconnect()
 
@@ -177,7 +177,7 @@ def runcmd(threadName,q):
 		time.sleep(10.0)
 
 class MqttClient(threading.Thread):
-	def __init__(self,threadID,name,on_connect,on_message,on_disconnect,server,port,alivetime,sleeptime):
+	def __init__(self,threadID,name,on_connect,on_message,on_disconnect,server,port,alivetime,sleeptime,timeout):
 		threading.Thread.__init__(self)
 		self.threadID = threadID
 		self.name = name
@@ -188,19 +188,22 @@ class MqttClient(threading.Thread):
 		self.port = port
 		self.alivetime= alivetime 
 		self.sleeptime = sleeptime
+		self.timeout = timeout
 	def run(self):
 		client.on_connect = on_connect
 		client.on_message = on_message
 		client.connect(self.server,self.port,self.alivetime)
 		while True:
-			client.loop()
+			client.loop(timeout=self.timeout)
 			time.sleep(self.sleeptime)
+#		client.loop_forever(timeout=self.timeout)
 
 		
 		
 Watcher()
 mqttClientKeepAliveTime = int(conf.get('time','thread_mqtt_keepalive_time'))
 mqttClientLoopSleepTime = float(conf.get('time','thread_mqtt_loop_sleeptime'))
+mqttClientLoopTimeout = float(conf.get('time','thread_mqtt_loop_timeout'))
 cmdSleepTime = float(conf.get('time','thread_cmd_sleep_time'))
 positionSenderSleeptime = float(conf.get('time','thread_mqtt_sender_position_sleeptime'))
 scannerScanTime = float(conf.get('time','main_scanner_scantime'))
@@ -210,7 +213,7 @@ outbodyFlag = conf.get('BLE','outbody_manufacturer_flag')
 positionFlag= conf.get('BLE','position_manufacturer_flag')
 
 client = mqtt.Client(client_id=stationAlias,clean_session=False)
-thread1 = MqttClient(1,'thread1',on_connect,on_message,on_disconnect,MQTTServer,MQTTPort,mqttClientKeepAliveTime,mqttClientLoopSleepTime)
+thread1 = MqttClient(1,'thread1',on_connect,on_message,on_disconnect,MQTTServer,MQTTPort,mqttClientKeepAliveTime,mqttClientLoopSleepTime,mqttClientLoopTimeout)
 thread1.start()
 thread2 = MqttListener(2,'thread2',commandQ)
 thread2.start()
