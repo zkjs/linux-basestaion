@@ -164,7 +164,7 @@ class ScanDelegate(DefaultDelegate):
 		except UnicodeDecodeError,e:
 			pass
 		#00ff121382 normal／  00ff126682 call
-		if (not data.has_key('Manufacturer')) or ( not data['Manufacturer'].startswith(braceletFlag)):
+                if (not data.has_key('Manufacturer')) or ( not data['Manufacturer'].startswith(braceletFlag)) and (not data['Manufacturer'].startswith(braceletFlag2)) and (not data['Manufacturer'].startswith(braceletFlag3)):
 			return 0
 		data['addr'] = dev.addr
 		data['rssi'] = dev.rssi
@@ -180,15 +180,16 @@ class ScanDelegate(DefaultDelegate):
 		local_ip = get_ip_address('wlan0')
 		hex_ip = ''.join([hex(int(i)).lstrip('0x').rjust(2,'0') for i in local_ip.split('.')])
 		temp = 50
+                reserved = '010001000100' #fixed reserved bytes
 	
 		#newdata = '%s%s%s%s%s%s' % (data['bcid'],stationAlias,stationMac,dev.addr,flag, electricity)
 		#那拼数据，从包头到温度，ip转十六进制，然后整一串儿倒二进制，最后末端插一位校验和，就成了
-		newdata = 'fefe%s%s%s%s%s%s%s' % (flag,stationMac,hex_ip,dev.addr.replace(':',''),hex(dev.rssi*(-1)).lstrip('0x').rjust(2,'0'),electricity,hex(temp).lstrip('0x').rjust(2,'0'))
+		newdata = 'fefe%s%s%s%s%s%s%s%s' % (flag,stationMac,hex_ip,dev.addr.replace(':',''),hex(dev.rssi*(-1)).lstrip('0x').rjust(2,'0'),electricity,hex(temp).lstrip('0x').rjust(2,'0'), reserved)
 		#print "stationMac: %s local_ip: %s(%s) bcid:%s ,rssi:%s, electricity:%s, temp:%s" % (stationMac,hex_ip,local_ip,dev.addr.replace(':',''),hex(dev.rssi*(-1)),electricity,hex(temp))
 		#print "assem data: %s " % (newdata,)
 		BinData = bytearray.fromhex(newdata)
 		#print "after to bin:%s" % (BinData,)
-		newBinData= BinData+checksum(BinData)
+                newBinData= BinData+checksum(BinData[2::])
 		arrs=[]
                 for e in newBinData:
                     arrs.append(str(e))
@@ -203,7 +204,8 @@ class ScanDelegate(DefaultDelegate):
                     #this is only happen every 50 fails 
                     #s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
                     #s.connect((socketHost, socketPort))
-                    s.sendall(newBinData)
+                    s.send(newBinData)
+                    #s.sendall(newBinData) #this caused a flush on recv side
                     print('-'.join(arrs))
                     #s.close()
                 except socket.error as msg:
@@ -316,6 +318,8 @@ positionSenderSleeptime = float(conf.get('time','thread_mqtt_sender_position_sle
 scannerScanTime = float(conf.get('time','main_scanner_scantime'))
 callFlag= conf.get('BLE','call_manufacturer_flag')
 braceletFlag= conf.get('BLE','bracetlet_flag')
+braceletFlag2=conf.get('BLE','bracelet2_flag')
+braceletFlag3=conf.get('BLE','bracelet3_flag')
 outbodyFlag = conf.get('BLE','outbody_manufacturer_flag')
 positionFlag= conf.get('BLE','position_manufacturer_flag')
 socketHost = conf.get('SOCKET','host')

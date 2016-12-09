@@ -4,6 +4,7 @@
 import socket
 import sys
 import time
+import paho.mqtt.client as mqtt
 import struct
 #from SocketServer import *
 import SocketServer
@@ -54,7 +55,17 @@ PORT = 8555              # Arbitrary non-privileged port
 #        print ex
     #print('%s' % data)
 #conn.close()
-#SocketServer()i
+#SocketServer()
+def on_connect(client,userdata,flags,rc):
+	client.subscribe(CMDTITLE)
+	print("Connected with resut code " + str(rc))
+
+def on_disconnect(client, userdata, rc):      
+	while rc != 0:
+	 	sleep(2)
+		print "Reconnecting..."
+		rc = client.reconnect()
+    
 class MyTCPHandler(SocketServer.BaseRequestHandler):
     """
     The request handler class for our server.
@@ -69,11 +80,12 @@ class MyTCPHandler(SocketServer.BaseRequestHandler):
         self.data = self.request.recv(1024).strip()
         print "{} wrote:".format(self.client_address[0])
         while True:
-            self.data = self.request.recv(1024).strip() 
+            #self.data = self.request.recv(1024).strip() 
+            self.data = self.request.recv(1024)  #unusual strip off the end chsum
             if not self.data: break
             arrs = []
             for e in self.data:
-                arrs.append(str(struct.unpack('B', e[0])[0]))
+                arrs.append('{:02x}'.format(struct.unpack('B', e[0])[0]))
             print('-'.join(arrs))
 
 if __name__ == "__main__":
