@@ -80,13 +80,14 @@ class MyTCPHandler(SocketServer.BaseRequestHandler):
         self.data = self.request.recv(1024).strip()
         print "{} wrote:".format(self.client_address[0])
         while True:
-            #self.data = self.request.recv(1024).strip() 
-            self.data = self.request.recv(1024)  #unusual strip off the end chsum
+            self.data = self.request.recv(1024).strip() 
+            #self.data = self.request.recv(1024)  #unusual strip off the end chsum
             if not self.data: break
             arrs = []
             for e in self.data:
                 arrs.append('{:02x}'.format(struct.unpack('B', e[0])[0]))
-            print('-'.join(arrs))
+            #print('-'.join(arrs))
+            print self.data
 
 if __name__ == "__main__":
     server = SocketServer.TCPServer((HOST, PORT), MyTCPHandler)
