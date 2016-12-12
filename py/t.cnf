@@ -18,6 +18,8 @@ call_t = nursecall
 host = 47.88.15.107
 port = 8555
 
+[DATA]
+MODE= SJ
 
 [BLE]
 bracetlet_flag= 00ff

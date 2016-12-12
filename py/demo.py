@@ -10,12 +10,15 @@ import ConfigParser
 import socket
 import fcntl
 import struct
+from protobuilder import outputbuilder
 
 conf = ConfigParser.ConfigParser()
 conf.read('t.cnf')
-
+#SEND MODE = SJ=socket json, SB=socket Binary, MJ=mqtt json
+SENDMODE = conf.get("DATA","MODE")
 POSITIONTITLE = conf.get("MQTT","position_t")
 CMDTITLE = conf.get("MQTT","cmd_t")
+
 CALLTITLE = conf.get("MQTT","call_t")
 COMMONTITLE = conf.get("MQTT","common_t")
 PositionQueueLength = int(conf.get("queue",'position_l'))
@@ -37,9 +40,15 @@ stationAlias=conf.get('station','alias')
 threads=[]
 threadID=1
 global lastDiscoveryTime
+#pure mac without :
 def get_mac_address(): 
     mac=uuid.UUID(int = uuid.getnode()).hex[-12:] 
     return "".join([mac[e:e+2] for e in range(0,11,2)])
+#full mac with :
+def get_mac_address_full():
+    mac=uuid.UUID(int = uuid.getnode()).hex[-12:]
+    return ':'.join([mac[e:e+2] for e in range(0,11,2)])
+
 global stationMac 
 stationMac = get_mac_address()
 base = [str(x) for x in range(10)] + [ chr(x) for x in range(ord('A'),ord('A')+6)]
@@ -164,7 +173,7 @@ class ScanDelegate(DefaultDelegate):
 		except UnicodeDecodeError,e:
 			pass
 		#00ff121382 normal／  00ff126682 call
-                if (not data.has_key('Manufacturer')) or ( not data['Manufacturer'].startswith(braceletFlag)) and (not data['Manufacturer'].startswith(braceletFlag2)) and (not data['Manufacturer'].startswith(braceletFlag3)):
+                if (not data.has_key('Manufacturer')) or ( not data['Manufacturer'].startswith(braceletFlag)): #and (not data['Manufacturer'].startswith(braceletFlag2)) and (not data['Manufacturer'].startswith(braceletFlag3)):
 			return 0
 		data['addr'] = dev.addr
 		data['rssi'] = dev.rssi
@@ -204,9 +213,12 @@ class ScanDelegate(DefaultDelegate):
                     #this is only happen every 50 fails 
                     #s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
                     #s.connect((socketHost, socketPort))
-                    s.send(newBinData)
+                    if SENDMODE == 'SB':
+                        s.send(newBinData)
                     #s.sendall(newBinData) #this caused a flush on recv side
-                    print('-'.join(arrs))
+                    #print('-'.join(arrs))
+                    elif SENDMODE == 'SJ':
+                        s.send(outputbuilder(flag,get_mac_address_full(),dev.addr,100,local_ip,dev.rssi))
                     #s.close()
                 except socket.error as msg:
                     #s.close()
