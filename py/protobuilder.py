@@ -44,4 +44,5 @@ def outputbuilder(bccommand,bsmac,bcmac,battery,bsip,rssi):
     except:
         res = None
     
-    return res
+    return res+'\n'      #according to requirements, the json end with \n
+
