@@ -8,6 +8,7 @@ import paho.mqtt.client as mqtt
 import struct
 #from SocketServer import *
 import SocketServer
+import json
 #import SocketServer.BaseRequestHandler
 HOST = '0.0.0.0'               # Symbolic name meaning all available interfaces
 PORT = 8555              # Arbitrary non-privileged port
@@ -83,10 +84,11 @@ class MyTCPHandler(SocketServer.BaseRequestHandler):
             self.data = self.request.recv(1024).strip() 
             #self.data = self.request.recv(1024)  #unusual strip off the end chsum
             if not self.data: break
-            arrs = []
-            for e in self.data:
-                arrs.append('{:02x}'.format(struct.unpack('B', e[0])[0]))
+            #arrs = []
+            #for e in self.data:
+            #    arrs.append('{:02x}'.format(struct.unpack('B', e[0])[0]))
             #print('-'.join(arrs))
+            #192.168.2.9  
             print self.data
 
 if __name__ == "__main__":

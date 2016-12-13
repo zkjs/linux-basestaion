@@ -32,14 +32,22 @@ manufacture data example:
 兼容对方json格式；Socket发送序列化字串；
 
 
-	{"Command": 2003, "APMac":"~", “DevMac": "-", "Power": 0.0, "Temperature": 0.0, "APAddress":"ip", "APPort":0}
+	{"Command": 2003, "APMac":"~", “DevMac": "-", "Power": 0.0, "Temperature": 0.0, "APAddress":"ip", "APPort":0}\n
 
 其中：`Command` 对应手环命令，但缺乏`RSSI`字段，应予协调和增加；
  `2001`=报警，`2002`=强拆/离体，`2003`=分配，`2004`=正常/心跳/定位
+末尾需要增加`\n`以避免“粘串”；
 
 - version 3：
 对方规定的BINARY格式；Socket发送；
 
 
 	fefe-01-010000000000-f0000001-010000000000-010101-010001000100-f7
+
+## 3 已知缺陷
+
+- 下行数据/下行命令解析；
+- 离体信号
+- 对方处理高频数据，并对多站数据进行筛选处理（增加filter）
+- 对方希望提供信号强度-距离模型
 
