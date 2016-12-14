@@ -17,7 +17,8 @@ call_t = nursecall2
 
 [SOCKET]
 #host = 47.88.15.107
-host = 192.168.1.106
+#host = 192.168.1.106
+host = 10.8.47.5
 port = 50007 
 
 

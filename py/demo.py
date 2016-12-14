@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #/usr/bin/python
+# -*- coding: utf-8 -*-
 import Queue,threading,signal,traceback,os
 import time,sys,datetime
 import paho.mqtt.client as mqtt
@@ -94,7 +94,7 @@ class ScanDelegate(DefaultDelegate):
 				data[desc]=value
 		except UnicodeDecodeError,e:
 			pass
-		#00ff121382 normal／  00ff126682 call
+		#print "%s，%s" % (data['Manufacturer'],braceletFlag)
 		if (not data.has_key('Manufacturer')) or ( not data['Manufacturer'].startswith(braceletFlag)):
 			return 0
 		data['addr'] = dev.addr
@@ -159,7 +159,7 @@ class ScanDelegate(DefaultDelegate):
 			lastDiscoveryTime = time.time()
 			return 0
 		positionQ.put(json.dumps(data))
-		#print json.dumps(data)
+		print json.dumps(data)
 		lastDiscoveryTime = time.time()
 
 def on_connect(client,userdata,flags,rc):
@@ -256,6 +256,7 @@ if __name__=='__main__':
             s.connect((socketHost,socketPort))
             s.setblocking(0)
         except socket.error as msg:
+	    print "socket error:"
             print(msg)
         reconnect_count = 0
 
@@ -273,4 +274,5 @@ if __name__=='__main__':
 		#	client.publish(COMMONTITLE,json.dumps(result))
 		#	lastDiscoveryTime = now
             except:
+		#print e
                 time.sleep(5)

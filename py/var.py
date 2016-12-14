@@ -1,9 +1,15 @@
 #! /usr/bin/python
 
 import ConfigParser
-
+import os,sys
+def cur_file_dir():
+     path = sys.path[0]
+     if os.path.isdir(path):
+         return path
+     elif os.path.isfile(path):
+         return os.path.dirname(path)
 conf = ConfigParser.ConfigParser()
-conf.read('t.cnf')
+conf.read('%s/%s'% (cur_file_dir(),'t.cnf'))
 
 POSITIONTITLE = conf.get("MQTT","position_t")
 CMDTITLE = conf.get("MQTT","cmd_t")
