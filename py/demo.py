@@ -6,92 +6,23 @@ import paho.mqtt.client as mqtt
 import json
 from bluepy.btle import Scanner,DefaultDelegate
 import uuid
-import ConfigParser
 import socket
 import fcntl
 import struct
+from func import *
+from var import *
 
-conf = ConfigParser.ConfigParser()
-conf.read('t.cnf')
+global stationAlias
+global reconnect_count
+global lastDiscoveryTime
+global stationMac 
 
-POSITIONTITLE = conf.get("MQTT","position_t")
-CMDTITLE = conf.get("MQTT","cmd_t")
-CALLTITLE = conf.get("MQTT","call_t")
-COMMONTITLE = conf.get("MQTT","common_t")
-PositionQueueLength = int(conf.get("queue",'position_l'))
-CommandQueueLength = int(conf.get("queue",'cmd_l'))
-CallQueueLength = int(conf.get("queue","call_l"))
-MQTTServer = conf.get('MQTT','server')
-if conf.has_option('MQTT','port'):
-	MQTTPort = int(conf.get('MQTT','port'))
-else:
-	MQTTPort = 1883
-
+threads=[]
+threadID=1
+stationMac = get_mac_address()
 positionQ= Queue.Queue(PositionQueueLength)
 commandQ = Queue.Queue(CommandQueueLength)
 callQ = Queue.Queue(CallQueueLength)
-global stationAlias
-global reconnect_count
-
-stationAlias=conf.get('station','alias')
-threads=[]
-threadID=1
-global lastDiscoveryTime
-def get_mac_address(): 
-    mac=uuid.UUID(int = uuid.getnode()).hex[-12:] 
-    return "".join([mac[e:e+2] for e in range(0,11,2)])
-global stationMac 
-stationMac = get_mac_address()
-base = [str(x) for x in range(10)] + [ chr(x) for x in range(ord('A'),ord('A')+6)]
-def hex2bin(string_num):
-	dec = int(string_num.upper(),16)
-	mid = []
-	while True:
-		if dec == 0: break
-		dec,rem = divmod(dec, 2)
-		mid.append(base[rem])
-	return ''.join([str(x) for x in mid[::-1]])
-	
-	
-def checksum_old(string):
-	sum = 0
-	tmp = bytearray.fromhex(string)
-	for e in tmp:
-		sum += e
-	r = bytearray.fromhex('{:04x}',format(sum))
-	return cc[-1]
-#checksum based on RFC 
-def checksum(b):
-    sum = 0
-    for e in b:
-        sum += e
-    cc = bytearray.fromhex('{:04x}'.format(sum))
-    b = bytearray([0])
-    n = cc[-1]
-#    b[1]= n & 0xFF
-#    n >>= 8
-    b[0]= n & 0xFF
-    return b
-
-def defined(x):
-	try :
-		type(eval(x))
-	except:
-		return False
-	else:
-		return True
-def get_ip_address(ifname):
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    #try to avoid net drop exceptions
-    try: 
-        res = socket.inet_ntoa(fcntl.ioctl(
-        s.fileno(),
-        0x8915,  # SIOCGIFADDR
-        struct.pack('256s', ifname[:15])
-    )[20:24])
-    except:
-        res = '127.0.0.1'
-    return res
 
 class Watcher:
     """this class solves two problems with multithreaded 
@@ -273,6 +204,7 @@ def senddata(threadName,title,q,sleeptime):
 		while not q.empty():
 			data = q.get()
 			client.publish(title,data)
+			print "sended %s " % (data,)
 		if sleeptime > 0:
 			time.sleep(sleeptime)
 
@@ -307,29 +239,16 @@ class MqttClient(threading.Thread):
 
 		
 		
-Watcher()
-mqttClientKeepAliveTime = int(conf.get('time','thread_mqtt_keepalive_time'))
-mqttClientLoopSleepTime = float(conf.get('time','thread_mqtt_loop_sleeptime'))
-mqttClientLoopTimeout = float(conf.get('time','thread_mqtt_loop_timeout'))
-cmdSleepTime = float(conf.get('time','thread_cmd_sleep_time'))
-positionSenderSleeptime = float(conf.get('time','thread_mqtt_sender_position_sleeptime'))
-scannerScanTime = float(conf.get('time','main_scanner_scantime'))
-callFlag= conf.get('BLE','call_manufacturer_flag')
-braceletFlag= conf.get('BLE','bracetlet_flag')
-outbodyFlag = conf.get('BLE','outbody_manufacturer_flag')
-positionFlag= conf.get('BLE','position_manufacturer_flag')
-socketHost = conf.get('SOCKET','host')
-socketPort = int(conf.get('SOCKET','port'))
-
-client = mqtt.Client(client_id=stationAlias,clean_session=False)
-thread1 = MqttClient(1,'thread1',on_connect,on_message,on_disconnect,MQTTServer,MQTTPort,mqttClientKeepAliveTime,mqttClientLoopSleepTime,mqttClientLoopTimeout)
-thread1.start()
-thread2 = MqttListener(2,'thread2',commandQ)
-thread2.start()
-thread3 = MqttSender(3,'thread3',POSITIONTITLE,positionQ,positionSenderSleeptime)
-thread3.start()
-
 if __name__=='__main__':
+	Watcher()
+	client = mqtt.Client(client_id=stationAlias,clean_session=False)
+	thread1 = MqttClient(1,'thread1',on_connect,on_message,on_disconnect,MQTTServer,MQTTPort,mqttClientKeepAliveTime,mqttClientLoopSleepTime,mqttClientLoopTimeout)
+	thread1.start()
+	thread2 = MqttListener(2,'thread2',commandQ)
+	thread2.start()
+	thread3 = MqttSender(3,'thread3',POSITIONTITLE,positionQ,positionSenderSleeptime)
+	thread3.start()
+
 	global lastDiscoveryTime
 	global s
 	s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
