@@ -48,3 +48,10 @@ alias = see configuration of bs
 - tf card 04 -> 1012
 - tf card 10 -> 1009
 - tf card 08 -> 1003
+
+### TODOs
+
+- autoconfig
+- command: and take some photo; compress and upload to some where;
+- choose a best qualitied, big faced one; if opencv:face detection is set
+

@@ -14,7 +14,7 @@ def outputbuilder(bccommand,bsmac,bcmac,battery,bsip,rssi):
     #battery until next bc version
     #bccommand = key, 13, 66, 68 etc;
     #bccommand = value, 2004, 2001, 2002, etc
-    cmdict = {'13': 2004, '66': 2001, '68':2002}
+    cmdict = {'13': 2004, '66': 2001, '68':2002, '70':2003}
     cm = cmdict.get(bccommand, False)
     if cm:
         data['Command'] = cm
