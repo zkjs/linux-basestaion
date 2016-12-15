@@ -157,6 +157,23 @@ def reconnect():
             s.connect((socketHost,socketPort))
         except socket.error as msg:
             print(msg)
+def alarm_update(bcid, flag):
+    global alarm_cache
+    global position_cache
+    #position cache for time, alarm cache for counts for each bcid
+    bc = str(bcid)
+    f=str(flag)
+    if f == '13':
+        alarm_cache[bc]=0
+        return False
+    elif f == '66' and alarm_cache[bc] >=7 :
+        alarm_cache[bc]=0
+        return True
+    elif f == '66' and alarm_cache[bc] < 7:
+        alarm_cache[bc] += 1
+        print('alarmtimes=%s' % alarm_cache[bc])
+        return False
+
 
 class ScanDelegate(DefaultDelegate):
         def __init__(self):
@@ -167,6 +184,8 @@ class ScanDelegate(DefaultDelegate):
 		timestamp = time.time()
 		global lastDiscoveryTime
 		global s
+                #global alarm_cache
+                #global position_cache
 		try:
 			for (adtype,desc,value) in dev.getScanData():
 				data[desc]=value
@@ -186,7 +205,7 @@ class ScanDelegate(DefaultDelegate):
 		#electricity = data['Manufacturer'][16:18]
 		electricity = '64' #fixed
                 flag = data['Manufacturer'][6:8]
-		local_ip = get_ip_address('wlan0')
+		local_ip = get_ip_address('eth0')    #swap for wlan0 for convenience
 		hex_ip = ''.join([hex(int(i)).lstrip('0x').rjust(2,'0') for i in local_ip.split('.')])
 		temp = 50
                 reserved = '010001000100' #fixed reserved bytes
@@ -199,26 +218,34 @@ class ScanDelegate(DefaultDelegate):
 		BinData = bytearray.fromhex(newdata)
 		#print "after to bin:%s" % (BinData,)
                 newBinData= BinData+checksum(BinData[2::])
-		arrs=[]
-                for e in newBinData:
-                    arrs.append(str(e))
+		#arrs=[]
+                #for e in newBinData:
+                #    arrs.append(str(e))
                     #arrs.append(str(struct.unpack('B', e[0])[0]))
                 #print('-'.join(arrs))
                 #newBinData = base64.b16decode(newdata)
 		#print "send bin data: %s, last %s" % (newBinData,checksum(BinData))
 		#send to where
+                #!the sent must count first, every 3 packet sent one position packet
+                #!if shortly 10 + alarm count, then sent a regist count (flag=70);
+                #!see the method: alarm_update()
+                
+                
                 try:
                     #re-use present socket link;
                     #rather than close and open a new socket;
                     #this is only happen every 50 fails 
                     #s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
                     #s.connect((socketHost, socketPort))
-                    if SENDMODE == 'SB':
+                    if SENDMODE == 'SB':# and alarm_update(flag):
                         s.send(newBinData)
                     #s.sendall(newBinData) #this caused a flush on recv side
                     #print('-'.join(arrs))
-                    elif SENDMODE == 'SJ':
+                    elif SENDMODE == 'SJ':# and alarm_update(flag):
                         s.send(outputbuilder(flag,get_mac_address_full(),dev.addr,100,local_ip,dev.rssi))
+                        if alarm_update(data['bcid'], flag):                        
+                            s.send(outputbuilder('70',get_mac_address_full(),dev.addr,100,local_ip,dev.rssi))
+                            print('sent 70xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
                     #s.close()
                 except socket.error as msg:
                     #s.close()
@@ -348,6 +375,10 @@ thread3.start()
 if __name__=='__main__':
 	global lastDiscoveryTime
 	global s
+        global position_cache
+        global alarm_cache
+        position_cache = {}
+        alarm_cache = {}
 	s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         try:
             s.connect((socketHost,socketPort))
