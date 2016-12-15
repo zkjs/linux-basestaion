@@ -55,3 +55,4 @@ alias = see configuration of bs
 - command: and take some photo; compress and upload to some where;
 - choose a best qualitied, big faced one; if opencv:face detection is set
 
+### TODO2

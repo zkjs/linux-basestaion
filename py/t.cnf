@@ -26,6 +26,8 @@ bracetlet_flag= 00ff
 position_manufacturer_flag= 13
 call_manufacturer_flag= 66
 outbody_manufacturer_flag= 68
+bracelet2_flag = 200000
+bracelet3_flag = 140000
 
 [time]
 thread_cmd_sleep_time = 10.0

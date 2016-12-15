@@ -166,10 +166,10 @@ def alarm_update(bcid, flag):
     if f == '13':
         alarm_cache[bc]=0
         return False
-    elif f == '66' and alarm_cache[bc] >=9 :
+    elif f == '66' and alarm_cache[bc] >=7 :
         alarm_cache[bc]=0
         return True
-    elif f == '66' and alarm_cache[bc] < 9:
+    elif f == '66' and alarm_cache[bc] < 7:
         alarm_cache[bc] += 1
         print('alarmtimes=%s' % alarm_cache[bc])
         return False
