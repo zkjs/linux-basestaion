@@ -9,6 +9,8 @@ import uuid
 import socket
 import fcntl
 import struct
+from zeroconf import ServiceBrowser, Zeroconf
+from six.moves import input
 from func import *
 from var import *
 
@@ -112,13 +114,8 @@ class ScanDelegate(DefaultDelegate):
 		hex_ip = ''.join([hex(int(i)).lstrip('0x').rjust(2,'0') for i in local_ip.split('.')])
 		temp = 50
 	
-		#newdata = '%s%s%s%s%s%s' % (data['bcid'],stationAlias,stationMac,dev.addr,flag, electricity)
-		#那拼数据，从包头到温度，ip转十六进制，然后整一串儿倒二进制，最后末端插一位校验和，就成了
 		newdata = 'fefe%s%s%s%s%s%s%s' % (flag,stationMac,hex_ip,dev.addr.replace(':',''),hex(dev.rssi*(-1)).lstrip('0x').rjust(2,'0'),electricity,hex(temp).lstrip('0x').rjust(2,'0'))
-		#print "stationMac: %s local_ip: %s(%s) bcid:%s ,rssi:%s, electricity:%s, temp:%s" % (stationMac,hex_ip,local_ip,dev.addr.replace(':',''),hex(dev.rssi*(-1)),electricity,hex(temp))
-		#print "assem data: %s " % (newdata,)
 		BinData = bytearray.fromhex(newdata)
-		#print "after to bin:%s" % (BinData,)
 		newBinData= BinData+checksum(BinData)
 		arrs=[]
                 for e in newBinData:
@@ -176,6 +173,23 @@ def on_message(client,userdata,msg):
 	if msg.topic == CMD_TITLE:
 		commandQ.put(str(msg.payload))
 
+class MyListener(object):
+
+    def remove_service(self, zeroconf, type, name):
+	#TODO:?
+        #print("Service %s removed" % (name,))
+	pass
+
+    def add_service(self, zeroconf, type, name):
+	global MQTTServer,MQTTPort,client
+        info = zeroconf.get_service_info(type, name)
+        #print("Service %s added, service info: %s" % (name, info))
+	if info.server 	!= MQTTServer or info.port != MQTTPort:
+		MQTTServer = info.server
+		MQTTPort = info.port
+		client.disconnect()
+		client.connect(MQTTServer,MQTTPort,mqttClientKeepAliveTime)
+
 class MqttSender(threading.Thread):
 	def __init__(self,threadID,name,title,q,sleeptime):
 		threading.Thread.__init__(self)
@@ -229,15 +243,20 @@ class MqttClient(threading.Thread):
 		self.sleeptime = sleeptime
 		self.timeout = timeout
 	def run(self):
+		global MQTTServer
+		global MQTTPort
 		client.on_connect = on_connect
 		client.on_message = on_message
 		client.connect(self.server,self.port,self.alivetime)
 		while True:
+			#if MQTTServer != self.server or MQTTPort != self.port:
+			#	disconnect()
+			#	self.server = MQTTServer
+			#	self.port = MQTTPort
+			#	client.connect(self.server,self.port,self.alivetime)
 			client.loop(timeout=self.timeout)
 			time.sleep(self.sleeptime)
-#		client.loop_forever(timeout=self.timeout)
 
-		
 		
 if __name__=='__main__':
 	Watcher()
@@ -248,6 +267,10 @@ if __name__=='__main__':
 	thread2.start()
 	thread3 = MqttSender(3,'thread3',POSITIONTITLE,positionQ,positionSenderSleeptime)
 	thread3.start()
+	#listen to zeroconf to check if mqtt server change
+	zeroconf = Zeroconf()
+	listener = MyListener()
+	browser = ServiceBrowser(zeroconf,"_mqtt._tcp.local.", listener)
 
 	global lastDiscoveryTime
 	global s

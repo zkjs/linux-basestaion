@@ -18,6 +18,8 @@ COMMONTITLE = conf.get("MQTT","common_t")
 PositionQueueLength = int(conf.get("queue",'position_l'))
 CommandQueueLength = int(conf.get("queue",'cmd_l'))
 CallQueueLength = int(conf.get("queue","call_l"))
+global MQTTserver
+global MQTTPort
 MQTTServer = conf.get('MQTT','server')
 if conf.has_option('MQTT','port'):
 	MQTTPort = int(conf.get('MQTT','port'))
