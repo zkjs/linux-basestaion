@@ -10,7 +10,8 @@ import socket
 import fcntl
 import struct
 from zeroconf import ServiceBrowser, Zeroconf
-from six.moves import input
+#from six.moves import input
+from ftplib import FTP
 from func import *
 from var import *
 
@@ -223,12 +224,49 @@ def senddata(threadName,title,q,sleeptime):
 			time.sleep(sleeptime)
 
 def runcmd(threadName,q):
+	global MQTTServer,MQTTPort
 	while True:
 		if not q.empty():
 			data= q.get()
+			if data.startswith('update'):
+				#parse args update -f[filename]* -i[ip/domain] -p[port]  -r[random range] -v[version] -P[path]
+				ArgsDict = {}
+				data = data.lstrip('update')
+				ArgsArray = data.split(' ')
+				for i in ArgsArray:
+					if i.startswith('-'):
+						if i[1] in ['i','p','f','r','P','v']:
+							ArgsDict[i[1]] = i[2:]
+						else:
+							#i don't know how to react	
+							pass
+					else:
+						#i don't know how to react
+						pass
+				if (not ArgsDict.has_key('f')) or (ArgsDict.has_key('i') and (not ArgsDict.has_key('p'))) or (not ArgDict.has_key('v'):
+					#shoule rase Exception ,return and exit
+					pass
+				if not ArgsDict.has_key('i'):
+					ArgsDict['i'] = MQTTServer
+				if not ArgsDict.has_key('p'):
+					ArgsDict['p'] = MQTTPort
+				if not ArgsDict.has_key('r'):
+					ArgsDict['r'] = 30
+				#call thd func
+				update_self(ArgsDict['f'],ArgsDict['i'],ArgsDict['p'],ArgsDict['v'],ArgsDict['r'])	
+				pass
 			print ("run cmd here " + data)
 		time.sleep(10.0)
 
+def update_self(filename,ip,port,version,ran):
+	#get the file via ftp	
+	#mv the target
+	#restart the script
+	ftp = FTP()
+	ftp.login('','')
+		
+	pass
+	
 class MqttClient(threading.Thread):
 	def __init__(self,threadID,name,on_connect,on_message,on_disconnect,server,port,alivetime,sleeptime,timeout):
 		threading.Thread.__init__(self)

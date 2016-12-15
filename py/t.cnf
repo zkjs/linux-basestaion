@@ -1,5 +1,6 @@
 [station]
 alias = HospitalA
+version = 1.0
 
 [queue]
 position_l= 10000

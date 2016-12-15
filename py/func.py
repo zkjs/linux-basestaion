@@ -1,6 +1,7 @@
 #! /usr/bin/python
 import uuid
 import socket
+import os,sys
 
 def get_ip_address(ifname):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -33,3 +34,9 @@ def checksum(b):
     b[0]= n & 0xFF
     return b
 
+def restart_program():  
+    """Restarts the current program. 
+    Note: this function does not return. Any cleanup action (like 
+    saving data) must be done before calling this function."""  
+    python = sys.executable  
+    os.execl(python, python, * sys.argv)  
