@@ -1,5 +1,6 @@
 [station]
 alias = HospitalA
+version = 1.0
 
 [queue]
 position_l= 10000
@@ -7,16 +8,19 @@ cmd_l= 100
 call_l = 100
 
 [MQTT]
-server = 192.168.1.199
+#server = 192.168.1.199
+server = 47.88.15.107
 port = 1883
-position_t = position
-cmd_t = cmd
-common_t = common
-call_t = nursecall
+position_t = position2
+cmd_t = cmd2
+common_t = common2
+call_t = nursecall2
 
 [SOCKET]
-host = 47.88.15.107
-port = 8555
+#host = 47.88.15.107
+#host = 192.168.1.106
+host = 10.8.47.5
+port = 50007 
 
 [DATA]
 MODE= SJ
