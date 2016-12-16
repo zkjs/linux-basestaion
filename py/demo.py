@@ -3,6 +3,7 @@
 import Queue,threading,signal,traceback,os
 import time,sys,datetime
 import paho.mqtt.client as mqtt
+import random
 import json
 from bluepy.btle import Scanner,DefaultDelegate
 import uuid
@@ -10,8 +11,11 @@ import socket
 import fcntl
 import struct
 from zeroconf import ServiceBrowser, Zeroconf
+import urllib 
+import urllib2 
+import requests
 #from six.moves import input
-from ftplib import FTP
+#from ftplib import FTP
 from func import *
 from var import *
 
@@ -246,27 +250,51 @@ def runcmd(threadName,q):
 				if (not ArgsDict.has_key('f')) or (ArgsDict.has_key('i') and (not ArgsDict.has_key('p'))) or (not ArgDict.has_key('v'):
 					#shoule rase Exception ,return and exit
 					pass
+				if type(ArgsDict['v']) != type('1.1'):
+					f=ArgsDict['v']	
+					try:
+						ArgsDict['v'] = float(f)
+					except Exception,e:
+						#TODO
+						pass
 				if not ArgsDict.has_key('i'):
 					ArgsDict['i'] = MQTTServer
 				if not ArgsDict.has_key('p'):
-					ArgsDict['p'] = MQTTPort
+					ArgsDict['p'] = 8000 
 				if not ArgsDict.has_key('r'):
-					ArgsDict['r'] = 30
+					ArgsDict['r'] = 600
 				#call thd func
-				update_self(ArgsDict['f'],ArgsDict['i'],ArgsDict['p'],ArgsDict['v'],ArgsDict['r'])	
+				if ArgsDict['v'] > version:
+					update_self(ArgsDict['f'],ArgsDict['i'],ArgsDict['p'],ArgsDict['v'],ArgsDict['r'])	
 				pass
 			print ("run cmd here " + data)
 		time.sleep(10.0)
 
 def update_self(filename,ip,port,version,ran):
-	#get the file via ftp	
-	#mv the target
-	#restart the script
-	ftp = FTP()
-	ftp.login('','')
-		
-	pass
 	
+        waittime = random.randrange(0,ran)
+        count = 5
+	suc = False
+	#print "sleep %f seconds " % (waittime,)
+        time.sleep(waittime)
+	#print "sleep done "
+        url = 'http://%s:%s/%s' % (ip,port,filename)
+        while not suc and count >= 0:
+                try :
+			#print "downloading..."
+                        urllib.urlretrieve(url,filename)
+			#print "set suc to True"
+			suc = True
+                except Exception,e:
+                        count-=1
+			#print "Fail, sleep 10s and retry remain %d times" % (count,)			
+			time.sleep(10)
+	if suc:			
+		restart_program()
+	else:
+		#log sth
+		pass
+			
 class MqttClient(threading.Thread):
 	def __init__(self,threadID,name,on_connect,on_message,on_disconnect,server,port,alivetime,sleeptime,timeout):
 		threading.Thread.__init__(self)

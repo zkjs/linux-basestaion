@@ -10,6 +10,7 @@ def cur_file_dir():
          return os.path.dirname(path)
 conf = ConfigParser.ConfigParser()
 conf.read('%s/%s'% (cur_file_dir(),'t.cnf'))
+version = float(conf.get('station','version'))
 
 POSITIONTITLE = conf.get("MQTT","position_t")
 CMDTITLE = conf.get("MQTT","cmd_t")
