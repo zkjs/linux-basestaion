@@ -14,7 +14,7 @@ INIT_TS = int(time.time()) #the begin ts of the script
 LAST_MQTT_RESP = 0 #the last mqtt response time;
 LAST_BLE_RESP = 0 #the last bluetooth signal time;
 #default setting
-host = '47.88.15.107'
+host = '127.0.0.1'
 port = 8555
 global sock
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -95,30 +95,37 @@ bc_ip = ''.join(('{:02x}'.format(01,'x'), '{:02x}'.format(0,'x'), '{:02x}'.forma
 bs_mac = '010000000000'
 rssi = '01' #-44 measured rssi
 battery = '01' #percent 
-temp = '01' 
+temp = '01'
+reserved = '010001000100' # 3x2 bytes for reserved
 #for i in range(1,3):
 while True:
     #global sock
 #    main_process()
 #    generate data
-    key=bytearray.fromhex('fefe%s%s%s%s%s%s%s' % (flag, bc_mac, bc_ip, bs_mac, rssi, battery, temp))
+    key=bytearray.fromhex('fefe%s%s%s%s%s%s%s%s' % (flag, bc_mac, bc_ip, bs_mac, rssi, battery, temp, reserved))
     print('len %s and end: %s' % (len(key), key[-1]))
-    key += checksum(key) #typeerro: concat bytearray int not allowed;
+    key += checksum(key[2::]) #typeerro: concat bytearray int not allowed;
     #key = pack('hhb', key, checksum(key))
     print('len %s and end: %s' % (len(key), key[-1]))
     print('sending %s' % key)
     arrs = []
     for e in key:
-        arrs.append(str(e))
-    print('-'.join(arrs))
+        arrs.append('{:02x}'.format(e))
+    print('|'.join(arrs))
     try:
-        #global sock
+    #    global sock
         #global recon_count
-        sock.send(key)
+    #    do_connect()
+        sock.sendall(key)
     except socket.error as msg:
         print('%s(%s)' % (msg, recon_count))
         reconnect()
-    time.sleep(6)
+   # try:
+   #     sock.close()
+   # except socket.error as msg:
+   #     print('close error:%s' % msg)
+
+    time.sleep(2.2)
 
 #sock.close()
 #data = sock.recv(1024)
