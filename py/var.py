@@ -1,13 +1,13 @@
 #! /usr/bin/python
-
 import ConfigParser
 import os,sys
-def cur_file_dir():
-     path = sys.path[0]
-     if os.path.isdir(path):
-         return path
-     elif os.path.isfile(path):
-         return os.path.dirname(path)
+from func import cur_file_dir
+#def cur_file_dir():
+#     path = sys.path[0]
+#     if os.path.isdir(path):
+#         return path
+#     elif os.path.isfile(path):
+#         return os.path.dirname(path)
 conf = ConfigParser.ConfigParser()
 conf.read('%s/%s'% (cur_file_dir(),'t.cnf'))
 version = float(conf.get('station','version'))
@@ -19,8 +19,8 @@ COMMONTITLE = conf.get("MQTT","common_t")
 PositionQueueLength = int(conf.get("queue",'position_l'))
 CommandQueueLength = int(conf.get("queue",'cmd_l'))
 CallQueueLength = int(conf.get("queue","call_l"))
-global MQTTserver
-global MQTTPort
+#global MQTTserver
+#global MQTTPort
 MQTTServer = conf.get('MQTT','server')
 if conf.has_option('MQTT','port'):
 	MQTTPort = int(conf.get('MQTT','port'))
