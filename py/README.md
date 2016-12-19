@@ -38,3 +38,7 @@ sudo pip install bluepy
 sudo apt install mosquitto-clients
 sudo pip install paho-mqtt #--trusted-host http://pypi.douban.com/
 ```
+安装zeroconf
+```shell
+sudo pip install zeroconf
+```
