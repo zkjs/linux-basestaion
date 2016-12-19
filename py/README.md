@@ -29,6 +29,12 @@ update -i10.8.47.5 -p8000 -m%s -fupgrade.tar -v1.0 -r10
 ```
 - -i:IP
 - -p:端口
+需要在此服务器，放置更新文件的目录开启http服务
+```shell
+#mac 调试时使用，仅供参考
+sudo apachectl start
+python -m SimpleHTTPServer
+```
 - -m:文件md5值
 - -f:tar文件，目前仅支持tar文件部署
 - -v:version版本号，基站会和本地t.cnf的文件内的版本号对比，比当前版本新才会执行更新
