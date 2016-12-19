@@ -242,25 +242,26 @@ def runcmd(threadName,q):
 				print "\033[0;32;40mget cmd as %s \033[0m" % (data,)
 				#parse args update -f[filename]* -m[md5_sum]* -i[ip/domain] -p[port]*  -r[random range] -v[version]*
 				ArgsDict = parseArgs2Dict(data.lstrip('update'))
-				if (not ArgsDict.has_key('f')) or (ArgsDict.has_key('i') and (not ArgsDict.has_key('p'))) or (not ArgDict.has_key('v')) or (not ArgsDict.has_key('m')):
+				if (not ArgsDict.has_key('f')) or (ArgsDict.has_key('i') and (not ArgsDict.has_key('p'))) or (not ArgsDict.has_key('v')) or (not ArgsDict.has_key('m')):
 					#shoule rase Exception ,return and exit
 					print "Error: lack some para"
 					return 
 				try:
 					if float(ArgsDict['v']) > version:
-						print "033[0;32;40mnew version upgrade command received \033[0m"
+						print "\033[0;32;40m new version upgrade command received \033[0m"
 						if not ArgsDict.has_key('i'):
 							ArgsDict['i'] = MQTTServer
 						if not ArgsDict.has_key('p'):
 							ArgsDict['p'] = MQTTPort
 						if not ArgsDict.has_key('r'):
 							ArgsDict['r'] = 600
-						update_self(ArgsDict['f'],ArgsDict['m'],ArgsDict['v'],ArgsDict['i'],ArgsDict['p'],ArgsDict['r'])	
+						update_self(ArgsDict['f'],ArgsDict['m'],ArgsDict['v'],ArgsDict['i'],ArgsDict['p'],int(ArgsDict['r']))	
 					else:
 						#should log sth
+						print "033[0;32;40m current version : %f, order version :%f\033[0m " % (version,ArgsDict['v'])
 						pass	
 				except Exception,e:
-					print Exception,e
+					print "\033[0;32;40m get %s:%s\033[0m"  % (Exception,e)
 					pass
 		time.sleep(10.0)
 
@@ -272,10 +273,12 @@ def update_self(filename,md5_sum,version,ip=MQTTServer,port=8000,ran=600):
 		print Exception,e
 		
 	if rdl['status'] == 'OK':
-		print "033[0;32;40mDownload %s Successfully...\033[0m" % (filename,)
+		print "\033[0;32;40mDownload %s Successfully...\033[0m" % (filename,)
 		rdp = deploy(filename)
 		if rdp['status'] == 'OK':
-			print "033[0;32;40mDeploy Successfully...\nPreparing to restart the program...\033[0m"
+			print "\033[0;32;40mDeploy Successfully...\nPreparing to remove the %s restart the program...\033[0m" % (filename,)
+			if os.path.exist(filename):
+				os.remove(filename)
 			restart_program()
 		else:
 			#TODO
@@ -350,6 +353,8 @@ if __name__=='__main__':
 	thread3 = MqttSender(3,'thread3',POSITIONTITLE,positionQ,positionSenderSleeptime)
 	thread3.start()
 	#listen to zeroconf to check if mqtt server change
+
+	# just for debug
 	zeroconf = Zeroconf()
 	listener = MyListener()
 	browser = ServiceBrowser(zeroconf,"_mqtt._tcp.local.", listener)

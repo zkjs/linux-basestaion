@@ -3,7 +3,7 @@
 import uuid
 import random
 import socket
-import hashlib
+import hashlib,urllib
 import os,sys,time
 import tarfile
 
@@ -73,16 +73,22 @@ def md5sum(fname):
 
 def download(filename,md5_sum,ip,port,ran):
 	waittime = random.randrange(0,ran)
-	time.sleep(waitime)
+	print "\033[0;32;40m sleep %ss\033[0m" % (waittime,)
+	time.sleep(waittime)
+	print "\033[0;32;40m sleep %ss done\033[0m" % (waittime,)
 	try:
 		url = 'http://%s:%s/%s' % (ip,port,filename)
 		urllib.urlretrieve(url,filename)
+		print "\033[0;32;40m download suc\033[0m "
 	except Exception,e:
+		print "\033[0;32;40m download ERROR %s:%s\033[0m" % (Exception,e)
 		return {'status':'Error','Info':"cannot download file %s:%s,%s" % (filename,Exception,e)}
 	md5OfFile = md5sum(filename)
 	if md5OfFile == md5_sum:
+		print "\033[0;32;40m download md5 check ok\033[0m "
 		return {'status':'OK'}
 	else:
+		print "\033[0;32;40m download md5 check failure receive:%s file:%s\033[0m "% (md5_sum,md5OfFile)
 		return {'status':'Error','Info': 'md5 of file:%s , md5 providd:%s, doesn\'t match.' % (md5OfFile,md5_sum)}
 		
 def extract(tar_path, target_path):
