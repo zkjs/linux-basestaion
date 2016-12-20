@@ -6,6 +6,8 @@ import socket
 import hashlib,urllib
 import os,sys,time
 import tarfile
+import picamera
+import requests
 
 def get_ip_address(ifname):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -122,3 +124,18 @@ def cur_file_dir():
          return path
      elif os.path.isfile(path):
          return os.path.dirname(path)
+
+def take_photo(filename,picResolutionV,picResolutionH,dirname,hottime):
+	camera = picamera.PiCamera()
+	camera.resolution(picResolutionV,picResolutionH)
+	camera.start_preview()
+	time.sleep(hottime)
+	camera.capture('%s/%s/%s' % (cur_file_dir(),dirname,filename,))
+	camera.close()
+
+def send_photo(filename,filedir,ip,port,bsid,bcid,now):
+	pic = open('%s/%s/%s' % (cur_file_dir(),filedir,filename))
+	url_path = 'http://%s:%s/photo/%s?ap=%s&time=%s' % (ip,port,bcid,bsid,now)
+	res = requests.post(url = url_path,
+                    data=data,
+		    headers={'Content-Type': 'image/jpeg'})

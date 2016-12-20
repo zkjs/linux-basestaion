@@ -40,4 +40,20 @@ outbodyFlag = conf.get('BLE','outbody_manufacturer_flag')
 positionFlag= conf.get('BLE','position_manufacturer_flag')
 socketHost = conf.get('SOCKET','host')
 socketPort = int(conf.get('SOCKET','port'))
-
+if conf.has_option('camera','resolution_h'):
+	picResolutionH = int(conf.get('camera','resolution_h')
+else:
+	picResolutionH = 1600
+if conf.has_option('camera','resolution_v'):
+	picResolutionV = int(conf.get('camera','resolution_v')
+else:
+	picResolutionH = 1200
+picUploadServer = conf.get('camera','upload_host')
+picUploadPort = conf.get('camera','upload_port')
+picUploadDir = conf.get('camera','tmp_dir')
+hottime = float(conf.get('camera','hotttime'))
+def write_conf(node,key,value):
+	fh = open('t.cnf','w')
+	conf.set(node,key,value)
+	fh.close()
+	conf.write(fh)

@@ -14,6 +14,8 @@ from zeroconf import ServiceBrowser, Zeroconf
 import urllib 
 import urllib2 
 import requests
+import picamera
+import json
 #from six.moves import input
 #from ftplib import FTP
 from func import *
@@ -157,7 +159,8 @@ class ScanDelegate(DefaultDelegate):
 			return 0	
 		elif data['Manufacturer'].startswith(outbodyFlag,6):
 			outbodyData = data
-			client.publish(COMMONTITLE,json.dumps(outbodyData))
+			#client.publish(COMMONTITLE,json.dumps(outbodyData))
+			client.publish(POSITIONTITLE,json.dumps(outbodyData))
 			lastDiscoveryTime = time.time()
 			return 0
 		positionQ.put(json.dumps(data))
@@ -196,6 +199,9 @@ class MyListener(object):
 		MQTTPort = info.port
 		client.disconnect()
 		client.connect(MQTTServer,MQTTPort,mqttClientKeepAliveTime)
+		#write back to conf file
+		write_conf('MQTT','server',MQTTServer)
+		write_conf('MQTT','port',MQTTPort)
 
 class MqttSender(threading.Thread):
 	def __init__(self,threadID,name,title,q,sleeptime):
@@ -217,7 +223,7 @@ class MqttListener(threading.Thread):
 		self.q=q
 
 	def run(self):
-		print('exec ... ' + self.name)
+		#print('exec ... ' + self.name)
 		runcmd(self.name,self.q)
 
 def senddata(threadName,title,q,sleeptime):
@@ -252,17 +258,26 @@ def runcmd(threadName,q):
 						if not ArgsDict.has_key('i'):
 							ArgsDict['i'] = MQTTServer
 						if not ArgsDict.has_key('p'):
-							ArgsDict['p'] = MQTTPort
+							ArgsDict['p'] = 8000 
 						if not ArgsDict.has_key('r'):
 							ArgsDict['r'] = 600
 						update_self(ArgsDict['f'],ArgsDict['m'],ArgsDict['v'],ArgsDict['i'],ArgsDict['p'],int(ArgsDict['r']))	
 					else:
 						#should log sth
 						print "033[0;32;40m current version : %f, order version :%f\033[0m " % (version,ArgsDict['v'])
-						pass	
 				except Exception,e:
 					print "\033[0;32;40m get %s:%s\033[0m"  % (Exception,e)
+			else :
+				try:
+					cmd = json.loads(data)
+				except Exception,e:
 					pass
+
+					if cmd['cmd'] == 'capture' :
+					#get photo
+						now = time.time()
+						take_photo('tmp.jpg',picUploadDir,picResolutionV,picResolutionH,hottime)
+						send_photo('tmp.jpg',picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
 		time.sleep(10.0)
 
 #def update_self(ip=MQTTServer,port=8000,ran=600,filename,md5_sum,version):

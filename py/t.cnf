@@ -42,3 +42,11 @@ thread_mqtt_sender_position_sleeptime = 5.0
 thread_mqtt_sender_call_sleeptime = 0
 thread_timer_control_blescan_flag_sleeptime = 10.0
 main_scanner_scantime = 1.0
+
+[camera]
+resolution_h =  1600
+resolution_v = 1200
+hottime = 2.0
+upload_host = 10.8.47.15
+upload_port = 9090
+tmp_dir = jpeg
