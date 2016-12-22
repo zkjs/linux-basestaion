@@ -1,5 +1,5 @@
 [station]
-alias = HospitalA
+alias = pinky 
 version = 1.0
 
 [queue]
@@ -11,10 +11,10 @@ call_l = 100
 #server = 192.168.1.199
 server = 47.88.15.107
 port = 1883
-position_t = position2
-cmd_t = cmd2
-common_t = common2
-call_t = nursecall2
+position_t = position
+cmd_t = ap
+common_t = common
+call_t = nursecall
 
 [SOCKET]
 #host = 47.88.15.107
@@ -35,7 +35,7 @@ bracelet3_flag = 140000
 
 [time]
 thread_cmd_sleep_time = 10.0
-thread_mqtt_loop_sleeptime = 10.0
+thread_mqtt_loop_sleeptime = 2.0
 thread_mqtt_loop_timeout = 1.0
 thread_mqtt_keepalive_time = 130
 thread_mqtt_sender_position_sleeptime = 5.0
@@ -46,7 +46,8 @@ main_scanner_scantime = 1.0
 [camera]
 resolution_h =  1600
 resolution_v = 1200
-hottime = 2.0
-upload_host = 10.8.47.15
+hottime = 1.0
+#upload_host = 10.8.47.15
+upload_host = 10.8.47.29
 upload_port = 9090
 tmp_dir = jpeg

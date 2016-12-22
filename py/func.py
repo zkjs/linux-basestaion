@@ -125,17 +125,24 @@ def cur_file_dir():
      elif os.path.isfile(path):
          return os.path.dirname(path)
 
-def take_photo(filename,picResolutionV,picResolutionH,dirname,hottime):
+def take_photo(filename,filedir,picResolutionV,picResolutionH,review,hottime):
 	camera = picamera.PiCamera()
-	camera.resolution(picResolutionV,picResolutionH)
-	camera.start_preview()
-	time.sleep(hottime)
-	camera.capture('%s/%s/%s' % (cur_file_dir(),dirname,filename,))
+	#print pic
+	camera.resolution = (picResolutionH,picResolutionV)
+	if not review:
+		camera.start_preview()
+		time.sleep(hottime)
+	camera.capture('%s/%s/%s' % (cur_file_dir(),filedir,filename,))
 	camera.close()
 
 def send_photo(filename,filedir,ip,port,bsid,bcid,now):
 	pic = open('%s/%s/%s' % (cur_file_dir(),filedir,filename))
-	url_path = 'http://%s:%s/photo/%s?ap=%s&time=%s' % (ip,port,bcid,bsid,now)
+	url_path = 'http://%s:%s/photo/%s?bracelets=%s&time=%s' % (ip,port,bsid,bcid,now)
+	print "\033[1;31;40mURL:%s\033[0m" % (url_path,)
 	res = requests.post(url = url_path,
-                    data=data,
+                    data=pic,
 		    headers={'Content-Type': 'image/jpeg'})
+	print "\033[1;31;40m%s \033[0m " % (res,)
+	print "\033[1;31;40m%s \033[0m " % (res.status_code,)
+	if res.statu_code == 200 :
+		os.remove('%s/%s/%s' % (cur_file_dir(),filedir,filename))
