@@ -146,3 +146,4 @@ def send_photo(filename,filedir,ip,port,bsid,bcid,now):
 	print "\033[1;31;40m%s \033[0m " % (res.status_code,)
 	if res.statu_code == 200 :
 		os.remove('%s/%s/%s' % (cur_file_dir(),filedir,filename))
+		return True
