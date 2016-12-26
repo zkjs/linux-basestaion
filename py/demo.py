@@ -20,6 +20,8 @@ import json
 #from ftplib import FTP
 from func import *
 from var import *
+import logging
+from logging.handlers import RotatingFileHandler
 
 global stationAlias
 global reconnect_count
@@ -283,17 +285,21 @@ def runcmd(threadName,q):
 						print "\033[0;32;40m capture cmd received and going to capture\033[0m"
 						print "\033[0;32;40m H:%s, %s ; V:%s, %s\033[0m" % (picResolutionH,type(picResolutionH),picResolutionV,type(picResolutionV))
 						now = int(time.time())
-						take_photo('tmp.jpg',picUploadDir,picResolutionV,picResolutionH,hottime)
-						send_photo('tmp.jpg',picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
+						try:
+							take_photo('tmp.jpg',picUploadDir,picResolutionV,picResolutionH,hottime)
+						except Exception,e:
+							print "\033[0;32;40m get %s:%s\033[0m" (Exception,e)
+						else:
+							send_photo('tmp.jpg',picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
 		time.sleep(10.0)
 
 def runcmd2(data):
 	
-	print "\033[0;32;40m runcmd2  \033[0m" 
+	#print "\033[0;32;40m runcmd2  \033[0m" 
 	global MQTTServer,MQTTPort
 	global cameraReviewed 
 	#print "\033[0;32;40m looping in runcmd %s while \033[0m"  % (q,)
-	print "\033[0;32;40m get %s from queue\033[0m"  % (data,)
+	print "\033[0;32;40m runcmd2 get %s \033[0m"  % (data,)
 	if data.startswith('update'):
 		print "\033[0;32;40mget cmd as %s \033[0m" % (data,)
 		#parse args update -f[filename]* -m[md5_sum]* -i[ip/domain] -p[port]*  -r[random range] -v[version]*
@@ -331,8 +337,19 @@ def runcmd2(data):
 				print "\033[0;32;40m H:%s, %s ; V:%s, %s\033[0m" % (picResolutionH,type(picResolutionH),picResolutionV,type(picResolutionV))
 				now = int(time.time())
 				filename = '%s_%s.jpg' % (cmd['bracelet'],now)
-				take_photo(filename,picUploadDir,picResolutionV,picResolutionH,cameraReviewed,hottime)
-				send_photo(filename,picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
+				#take_photo(filename,picUploadDir,picResolutionV,picResolutionH,cameraReviewed,hottime)
+				#send_photo(filename,picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
+				#if not cameraReviewed:
+				#	cameraReviewed = True
+				try:
+					take_photo(filename,picUploadDir,picResolutionV,picResolutionH,cameraReviewed,hottime)
+				except Exception,e:
+					print "\033[0;32;40m Capture get Exception:%s:%s\033[0m" % (Exception,e)
+				else:
+					send_photo(filename,picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
+					print "\033[0;32;40mtake_photo suc\033[0m"
+					if not cameraReviewed:
+						cameraReviewed = True
 
 #def update_self(ip=MQTTServer,port=8000,ran=600,filename,md5_sum,version):
 def update_self(filename,md5_sum,version,ip=MQTTServer,port=8000,ran=600):
