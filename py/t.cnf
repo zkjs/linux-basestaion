@@ -9,7 +9,8 @@ call_l = 100
 
 [MQTT]
 #server = 192.168.1.199
-server = 47.88.15.107
+#server = 47.88.15.107
+server = 10.8.47.29
 port = 1883
 position_t = position
 cmd_t = ap
@@ -38,7 +39,7 @@ thread_cmd_sleep_time = 10.0
 thread_mqtt_loop_sleeptime = 2.0
 thread_mqtt_loop_timeout = 1.0
 thread_mqtt_keepalive_time = 130
-thread_mqtt_sender_position_sleeptime = 5.0
+thread_mqtt_sender_position_sleeptime = 1.0
 thread_mqtt_sender_call_sleeptime = 0
 thread_timer_control_blescan_flag_sleeptime = 10.0
 main_scanner_scantime = 1.0

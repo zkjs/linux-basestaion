@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import uuid
 import random
-import socket
+import socket,fcntl
 import hashlib,urllib
 import os,sys,time
 import tarfile
@@ -125,14 +125,18 @@ def cur_file_dir():
      elif os.path.isfile(path):
          return os.path.dirname(path)
 
-def take_photo(filename,filedir,picResolutionV,picResolutionH,review,hottime):
+def take_photo(filename,filedir,picResolutionV,picResolutionH,cameraReviewed,hottime):
 	camera = picamera.PiCamera()
 	#print pic
 	camera.resolution = (picResolutionH,picResolutionV)
-	if not review:
+	if not cameraReviewed:
 		camera.start_preview()
 		time.sleep(hottime)
-	camera.capture('%s/%s/%s' % (cur_file_dir(),filedir,filename,))
+		camera.capture('%s/%s/%s' % (cur_file_dir(),filedir,filename,))
+		camera.stop_preview()
+		#cameraReviewed = True
+	else:
+		camera.capture('%s/%s/%s' % (cur_file_dir(),filedir,filename,))
 	camera.close()
 
 def send_photo(filename,filedir,ip,port,bsid,bcid,now):
@@ -144,6 +148,6 @@ def send_photo(filename,filedir,ip,port,bsid,bcid,now):
 		    headers={'Content-Type': 'image/jpeg'})
 	print "\033[1;31;40m%s \033[0m " % (res,)
 	print "\033[1;31;40m%s \033[0m " % (res.status_code,)
-	if res.statu_code == 200 :
+	if res.status_code == 200 :
 		os.remove('%s/%s/%s' % (cur_file_dir(),filedir,filename))
 		return True
