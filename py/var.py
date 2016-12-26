@@ -1,15 +1,16 @@
 #! /usr/bin/python
-
 import ConfigParser
 import os,sys
-def cur_file_dir():
-     path = sys.path[0]
-     if os.path.isdir(path):
-         return path
-     elif os.path.isfile(path):
-         return os.path.dirname(path)
+from func import cur_file_dir
+#def cur_file_dir():
+#     path = sys.path[0]
+#     if os.path.isdir(path):
+#         return path
+#     elif os.path.isfile(path):
+#         return os.path.dirname(path)
 conf = ConfigParser.ConfigParser()
 conf.read('%s/%s'% (cur_file_dir(),'t.cnf'))
+version = float(conf.get('station','version'))
 
 POSITIONTITLE = conf.get("MQTT","position_t")
 CMDTITLE = conf.get("MQTT","cmd_t")
@@ -18,8 +19,8 @@ COMMONTITLE = conf.get("MQTT","common_t")
 PositionQueueLength = int(conf.get("queue",'position_l'))
 CommandQueueLength = int(conf.get("queue",'cmd_l'))
 CallQueueLength = int(conf.get("queue","call_l"))
-global MQTTserver
-global MQTTPort
+#global MQTTserver
+#global MQTTPort
 MQTTServer = conf.get('MQTT','server')
 if conf.has_option('MQTT','port'):
 	MQTTPort = int(conf.get('MQTT','port'))
@@ -39,6 +40,21 @@ outbodyFlag = conf.get('BLE','outbody_manufacturer_flag')
 positionFlag= conf.get('BLE','position_manufacturer_flag')
 socketHost = conf.get('SOCKET','host')
 socketPort = int(conf.get('SOCKET','port'))
-
-#upload data configs,
-#SEND MODE = SJ=socket json, SB=socket Binary, MJ=mqtt json
+if conf.has_option('camera','resolution_h'):
+	picResolutionH = int(conf.get('camera','resolution_h'))
+else:
+	picResolutionH = 1600
+if conf.has_option('camera','resolution_v'):
+	picResolutionV = int(conf.get('camera','resolution_v'))
+else:
+	picResolutionH = 1200
+print "H:%s, %s ; V:%s, %s" % (picResolutionH,type(picResolutionH),picResolutionV,type(picResolutionV))
+picUploadServer = conf.get('camera','upload_host')
+picUploadPort = conf.get('camera','upload_port')
+picUploadDir = conf.get('camera','tmp_dir')
+hottime = float(conf.get('camera','hottime'))
+def write_conf(node,key,value):
+	fh = open('t.cnf','w')
+	conf.set(node,key,value)
+	fh.close()
+	conf.write(fh)
