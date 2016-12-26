@@ -1,0 +1,8 @@
+[SOCKET]
+host = 192.168.2.146
+port = 8090
+mac = eth0
+
+[DATA]
+type = B
+netmode = S
