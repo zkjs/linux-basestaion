@@ -344,7 +344,7 @@ def runcmd2(data):
 				try:
 					take_photo(filename,picUploadDir,picResolutionV,picResolutionH,cameraReviewed,hottime)
 				except Exception,e:
-					print "\033[0;32;40m Capture get Exception:%s:%s\033[0m" (Exception,e)
+					print "\033[0;32;40m Capture get Exception:%s:%s\033[0m" % (Exception,e)
 				else:
 					send_photo(filename,picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
 					print "\033[0;32;40mtake_photo suc\033[0m"
