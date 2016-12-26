@@ -1,15 +1,15 @@
-# -*- coding: utf-8 -*-
 #/usr/bin/python
+# -*- coding: utf-8 -*-
 import Queue,threading,signal,traceback,os
 import time,sys,datetime
 import paho.mqtt.client as mqtt
 import json
 from bluepy.btle import Scanner,DefaultDelegate
 import uuid
-import ConfigParser
 import socket
 import fcntl
 import struct
+<<<<<<< HEAD
 from protobuilder import outputbuilder
 
 conf = ConfigParser.ConfigParser()
@@ -33,12 +33,22 @@ else:
 positionQ= Queue.Queue(PositionQueueLength)
 commandQ = Queue.Queue(CommandQueueLength)
 callQ = Queue.Queue(CallQueueLength)
+=======
+from zeroconf import ServiceBrowser, Zeroconf
+#from six.moves import input
+from ftplib import FTP
+from func import *
+from var import *
+
+>>>>>>> 25b90f22562f12baac939623b56610201e5ca80f
 global stationAlias
 global reconnect_count
+global lastDiscoveryTime
+global stationMac 
 
-stationAlias=conf.get('station','alias')
 threads=[]
 threadID=1
+<<<<<<< HEAD
 global lastDiscoveryTime
 #pure mac without :
 def get_mac_address(): 
@@ -50,57 +60,12 @@ def get_mac_address_full():
     return ':'.join([mac[e:e+2] for e in range(0,11,2)])
 
 global stationMac 
+=======
+>>>>>>> 25b90f22562f12baac939623b56610201e5ca80f
 stationMac = get_mac_address()
-base = [str(x) for x in range(10)] + [ chr(x) for x in range(ord('A'),ord('A')+6)]
-def hex2bin(string_num):
-	dec = int(string_num.upper(),16)
-	mid = []
-	while True:
-		if dec == 0: break
-		dec,rem = divmod(dec, 2)
-		mid.append(base[rem])
-	return ''.join([str(x) for x in mid[::-1]])
-	
-	
-def checksum_old(string):
-	sum = 0
-	tmp = bytearray.fromhex(string)
-	for e in tmp:
-		sum += e
-	r = bytearray.fromhex('{:04x}',format(sum))
-	return cc[-1]
-#checksum based on RFC 
-def checksum(b):
-    sum = 0
-    for e in b:
-        sum += e
-    cc = bytearray.fromhex('{:04x}'.format(sum))
-    b = bytearray([0])
-    n = cc[-1]
-#    b[1]= n & 0xFF
-#    n >>= 8
-    b[0]= n & 0xFF
-    return b
-
-def defined(x):
-	try :
-		type(eval(x))
-	except:
-		return False
-	else:
-		return True
-def get_ip_address(ifname):
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    #try to avoid net drop exceptions
-    try: 
-        res = socket.inet_ntoa(fcntl.ioctl(
-        s.fileno(),
-        0x8915,  # SIOCGIFADDR
-        struct.pack('256s', ifname[:15])
-    )[20:24])
-    except:
-        res = '127.0.0.1'
-    return res
+positionQ= Queue.Queue(PositionQueueLength)
+commandQ = Queue.Queue(CommandQueueLength)
+callQ = Queue.Queue(CallQueueLength)
 
 class Watcher:
     """this class solves two problems with multithreaded 
@@ -191,8 +156,13 @@ class ScanDelegate(DefaultDelegate):
 				data[desc]=value
 		except UnicodeDecodeError,e:
 			pass
+<<<<<<< HEAD
 		#00ff121382 normal／  00ff126682 call
                 if (not data.has_key('Manufacturer')) or ( not data['Manufacturer'].startswith(braceletFlag)): #and (not data['Manufacturer'].startswith(braceletFlag2)) and (not data['Manufacturer'].startswith(braceletFlag3)):
+=======
+		#print "%s，%s" % (data['Manufacturer'],braceletFlag)
+		if (not data.has_key('Manufacturer')) or ( not data['Manufacturer'].startswith(braceletFlag)):
+>>>>>>> 25b90f22562f12baac939623b56610201e5ca80f
 			return 0
 		data['addr'] = dev.addr
 		data['rssi'] = dev.rssi
@@ -210,6 +180,7 @@ class ScanDelegate(DefaultDelegate):
 		temp = 50
                 reserved = '010001000100' #fixed reserved bytes
 	
+<<<<<<< HEAD
 		#newdata = '%s%s%s%s%s%s' % (data['bcid'],stationAlias,stationMac,dev.addr,flag, electricity)
 		#那拼数据，从包头到温度，ip转十六进制，然后整一串儿倒二进制，最后末端插一位校验和，就成了
 		newdata = 'fefe%s%s%s%s%s%s%s%s' % (flag,stationMac,hex_ip,dev.addr.replace(':',''),hex(dev.rssi*(-1)).lstrip('0x').rjust(2,'0'),electricity,hex(temp).lstrip('0x').rjust(2,'0'), reserved)
@@ -221,6 +192,14 @@ class ScanDelegate(DefaultDelegate):
 		#arrs=[]
                 #for e in newBinData:
                 #    arrs.append(str(e))
+=======
+		newdata = 'fefe%s%s%s%s%s%s%s' % (flag,stationMac,hex_ip,dev.addr.replace(':',''),hex(dev.rssi*(-1)).lstrip('0x').rjust(2,'0'),electricity,hex(temp).lstrip('0x').rjust(2,'0'))
+		BinData = bytearray.fromhex(newdata)
+		newBinData= BinData+checksum(BinData)
+		arrs=[]
+                for e in newBinData:
+                    arrs.append(str(e))
+>>>>>>> 25b90f22562f12baac939623b56610201e5ca80f
                     #arrs.append(str(struct.unpack('B', e[0])[0]))
                 #print('-'.join(arrs))
                 #newBinData = base64.b16decode(newdata)
@@ -269,7 +248,7 @@ class ScanDelegate(DefaultDelegate):
 			lastDiscoveryTime = time.time()
 			return 0
 		positionQ.put(json.dumps(data))
-		#print json.dumps(data)
+		print json.dumps(data)
 		lastDiscoveryTime = time.time()
 
 def on_connect(client,userdata,flags,rc):
@@ -285,6 +264,23 @@ def on_disconnect(client, userdata, rc):
 def on_message(client,userdata,msg):
 	if msg.topic == CMD_TITLE:
 		commandQ.put(str(msg.payload))
+
+class MyListener(object):
+
+    def remove_service(self, zeroconf, type, name):
+	#TODO:?
+        #print("Service %s removed" % (name,))
+	pass
+
+    def add_service(self, zeroconf, type, name):
+	global MQTTServer,MQTTPort,client
+        info = zeroconf.get_service_info(type, name)
+        #print("Service %s added, service info: %s" % (name, info))
+	if info.server 	!= MQTTServer or info.port != MQTTPort:
+		MQTTServer = info.server
+		MQTTPort = info.port
+		client.disconnect()
+		client.connect(MQTTServer,MQTTPort,mqttClientKeepAliveTime)
 
 class MqttSender(threading.Thread):
 	def __init__(self,threadID,name,title,q,sleeptime):
@@ -314,16 +310,54 @@ def senddata(threadName,title,q,sleeptime):
 		while not q.empty():
 			data = q.get()
 			client.publish(title,data)
+			print "sended %s " % (data,)
 		if sleeptime > 0:
 			time.sleep(sleeptime)
 
 def runcmd(threadName,q):
+	global MQTTServer,MQTTPort
 	while True:
 		if not q.empty():
 			data= q.get()
+			if data.startswith('update'):
+				#parse args update -f[filename]* -i[ip/domain] -p[port]  -r[random range] -v[version] -P[path]
+				ArgsDict = {}
+				data = data.lstrip('update')
+				ArgsArray = data.split(' ')
+				for i in ArgsArray:
+					if i.startswith('-'):
+						if i[1] in ['i','p','f','r','P','v']:
+							ArgsDict[i[1]] = i[2:]
+						else:
+							#i don't know how to react	
+							pass
+					else:
+						#i don't know how to react
+						pass
+				if (not ArgsDict.has_key('f')) or (ArgsDict.has_key('i') and (not ArgsDict.has_key('p'))) or (not ArgDict.has_key('v'):
+					#shoule rase Exception ,return and exit
+					pass
+				if not ArgsDict.has_key('i'):
+					ArgsDict['i'] = MQTTServer
+				if not ArgsDict.has_key('p'):
+					ArgsDict['p'] = MQTTPort
+				if not ArgsDict.has_key('r'):
+					ArgsDict['r'] = 30
+				#call thd func
+				update_self(ArgsDict['f'],ArgsDict['i'],ArgsDict['p'],ArgsDict['v'],ArgsDict['r'])	
+				pass
 			print ("run cmd here " + data)
 		time.sleep(10.0)
 
+def update_self(filename,ip,port,version,ran):
+	#get the file via ftp	
+	#mv the target
+	#restart the script
+	ftp = FTP()
+	ftp.login('','')
+		
+	pass
+	
 class MqttClient(threading.Thread):
 	def __init__(self,threadID,name,on_connect,on_message,on_disconnect,server,port,alivetime,sleeptime,timeout):
 		threading.Thread.__init__(self)
@@ -338,15 +372,22 @@ class MqttClient(threading.Thread):
 		self.sleeptime = sleeptime
 		self.timeout = timeout
 	def run(self):
+		global MQTTServer
+		global MQTTPort
 		client.on_connect = on_connect
 		client.on_message = on_message
 		client.connect(self.server,self.port,self.alivetime)
 		while True:
+			#if MQTTServer != self.server or MQTTPort != self.port:
+			#	disconnect()
+			#	self.server = MQTTServer
+			#	self.port = MQTTPort
+			#	client.connect(self.server,self.port,self.alivetime)
 			client.loop(timeout=self.timeout)
 			time.sleep(self.sleeptime)
-#		client.loop_forever(timeout=self.timeout)
 
 		
+<<<<<<< HEAD
 		
 Watcher()
 mqttClientKeepAliveTime = int(conf.get('time','thread_mqtt_keepalive_time'))
@@ -372,7 +413,22 @@ thread2.start()
 thread3 = MqttSender(3,'thread3',POSITIONTITLE,positionQ,positionSenderSleeptime)
 thread3.start()
 
+=======
+>>>>>>> 25b90f22562f12baac939623b56610201e5ca80f
 if __name__=='__main__':
+	Watcher()
+	client = mqtt.Client(client_id=stationAlias,clean_session=False)
+	thread1 = MqttClient(1,'thread1',on_connect,on_message,on_disconnect,MQTTServer,MQTTPort,mqttClientKeepAliveTime,mqttClientLoopSleepTime,mqttClientLoopTimeout)
+	thread1.start()
+	thread2 = MqttListener(2,'thread2',commandQ)
+	thread2.start()
+	thread3 = MqttSender(3,'thread3',POSITIONTITLE,positionQ,positionSenderSleeptime)
+	thread3.start()
+	#listen to zeroconf to check if mqtt server change
+	zeroconf = Zeroconf()
+	listener = MyListener()
+	browser = ServiceBrowser(zeroconf,"_mqtt._tcp.local.", listener)
+
 	global lastDiscoveryTime
 	global s
         global position_cache
@@ -384,6 +440,7 @@ if __name__=='__main__':
             s.connect((socketHost,socketPort))
             s.setblocking(0)
         except socket.error as msg:
+	    print "socket error:"
             print(msg)
         reconnect_count = 0
 
@@ -401,4 +458,5 @@ if __name__=='__main__':
 		#	client.publish(COMMONTITLE,json.dumps(result))
 		#	lastDiscoveryTime = now
             except:
+		#print e
                 time.sleep(5)
