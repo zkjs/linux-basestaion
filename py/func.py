@@ -1,5 +1,5 @@
 #! /usr/bin/python
-import uuid
+import uuid, fcntl, struct
 import socket
 import os,sys
 

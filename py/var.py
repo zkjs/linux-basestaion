@@ -40,3 +40,5 @@ positionFlag= conf.get('BLE','position_manufacturer_flag')
 socketHost = conf.get('SOCKET','host')
 socketPort = int(conf.get('SOCKET','port'))
 
+#upload data configs,
+#SEND MODE = SJ=socket json, SB=socket Binary, MJ=mqtt json
