@@ -15,6 +15,9 @@ KEY_ALARM = '02'
 KEY_BINDING = '03'
 KEY_LOST = '04'
 #static value 4 bracelet state, from proto document
+global alarm_cache
+alarm_cache = {}
+
 def get_empty_datadict():
     #datadict={keyflag, bsmac, hexip, bcmac, rssi, battery, temp, reserve}
     datadict={}
@@ -25,6 +28,7 @@ def get_empty_datadict():
     datadict['hexip'] = ''.join([hex(int(i)).lstrip('0x').rjust(2,'0') for i in local_ip.split('.')])
     datadict['bcmac'] = '010000000000'  #null bc mac;
     datadict['rssi'] = '63' #-99 predefined
+    datadict['srssi'] = 99 #99 in int
     datadict['battery'] = '64' #battery level=100
     datadict['temp']= '50' #hex temp
     datadict['reserved'] = '010001000100' #predefined fixed reserved bytes
@@ -40,20 +44,31 @@ def get_mac_address_full():
 #for bc1.0 count conseq alarm times4 binding flag
 def alarm_update(bcid, flag):
     global alarm_cache
-    global position_cache
+#    global position_cache
     #position cache for time, alarm cache for counts for each bcid
     bc = str(bcid)
-    f=str(flag)
-    if f == '13':
-        alarm_cache[bc]=0
+    f= flag
+    #print('alarm_update init')
+    if f == KEY_HEARTBEAT:
+        try:
+            alarm_cache[bc]=0
+        except:
+            print('cache error')
+            return False
         return False
-    elif f == '66' and alarm_cache[bc] >=7 :
+    elif f == KEY_ALARM and alarm_cache[bc] >=5 :
         alarm_cache[bc]=0
+        print('binding triggered')
         return True
-    elif f == '66' and alarm_cache[bc] < 7:
-        alarm_cache[bc] += 1
-        print('alarmtimes=%s' % alarm_cache[bc])
+    elif f == KEY_ALARM and alarm_cache[bc] < 5:
+        try:
+            alarm_cache[bc] += 1
+        except:
+            print('cache error')
+            return False
+        #print('alarmtimes=%s' % alarm_cache[bc])
         return False
+    return False
 
 def rawdata_translate(manufdata):
     #this is 4 raw data collect and return a expected data prot
@@ -66,6 +81,10 @@ def rawdata_translate(manufdata):
             flagdict['key'] = KEY_HEARTBEAT
         elif keyflag == '66':
             flagdict['key'] = KEY_ALARM
+        elif keyflag == '68':
+            flagdict['key'] = KEY_LOST
+        elif keyflag == '70':
+            flagdict['key'] = KEY_BINDING
         #the alarm update count in later 
     elif bctype == BCTYPE01:
         statflag = manufdata[6:8]
@@ -98,7 +117,7 @@ def gen_bin_data(datadict):
 
 def gen_json_data(datadict):
     #this generate same json data type 4 two bc adv version
-    ssdata = outputbuilder(datadict.keyflag, datadict.bsmacfull, datadict.bcaddr, 100, datadict.ip, datadict.srssi)
+    ssdata = outputbuilder(datadict['keyflag'], datadict['bsmacfull'], datadict['bcaddr'], 100, datadict['ip'], datadict['srssi'])
 
     return ssdata
 

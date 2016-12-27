@@ -33,6 +33,8 @@ global lastDiscoveryTime
 global stationMac 
 global cameraReviewed 
 global dataddd
+#global alarm_cache
+#alarm_cache = {}
 dataddd={}
 cameraReviewed = False
 threads=[]
@@ -119,29 +121,33 @@ class ScanDelegate(DefaultDelegate):
                     #print('dev+1 %s' % dev.addr )
                     #u just want update minimum fresh data here
                     try:
-                        s.send(bytearray.fromhex('01ab02ab'))
+                        #s.send(bytearray.fromhex('01ab02ab'))
                         dataddd['keyflag']=rawdata_translate(data['Manufacturer'])
+                    #    if alarm_update(dev.addr.replace(':',''), dataddd['keyflag']):
+                    #        dataddd['keyflag'] = KEY_BINDING
                     #ip need update
                     except:
                         print('dev+1 %s' % dev.addr )
+                    if alarm_update(dev.addr.replace(':',''), dataddd['keyflag']):
+                        dataddd['keyflag'] = KEY_BINDING
                     local_ip = get_ip_address(depIfip)
                     dataddd['ip'] = str(local_ip)
                     dataddd['hexip'] = ''.join([hex(int(i)).lstrip('0x').rjust(2,'0') for i in local_ip.split('.')])
                     dataddd['bcaddr'] = dev.addr
                     dataddd['bcmac'] = dev.addr.replace(':','')
                     dataddd['rssi'] = hex(dev.rssi*(-1)).lstrip('0x').rjust(2,'0')
+                    dataddd['srssi'] = dev.rssi*(-1)
                     ## data type 
-                    #if depProt == 'B':
-                    print('%s' % dataddd)
-                    load = gen_bin_data(dataddd)
-                    print('%s' % dataddd)
-                    #else:
-                    #    load = gen_json_data(datad)
-
+                    if depProt == 'B':
+                    #print('%s' % dataddd)
+                        load = gen_bin_data(dataddd)
+                    #print('%s' % dataddd)
+                    else:
+                        load = gen_json_data(dataddd)
                     ## send type
                     #if depNet == 'S':
                     try:
-                        s.sendall(load)
+                        s.send(load)
                         print('all xxx sent %s' % load)
                     except socket.error as msg:
                         print('socket error %s' % msg)
@@ -495,6 +501,8 @@ if __name__=='__main__':
 
 	global lastDiscoveryTime
 	global s
+        #global alarm_cache
+        #alarm_cache = {}
         #global dataddd
         dataddd = get_empty_datadict()
 	s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
