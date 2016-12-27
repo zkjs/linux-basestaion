@@ -12,9 +12,8 @@ depHost = depconf.get('SOCKET','host')
 #Socket Port
 depPort = int(depconf.get('SOCKET','port'))
 #MAC TYPE=wlan0/eth0
-depMac = depconf.get('SOCKET', 'mac')
+depIfip = depconf.get('SOCKET', 'ifnameip')
 #PROT MODE = B/J binary/json
 depProt = depconf.get('DATA', 'type')
 #SENT MODE = S/M socket/mqtt
 depNet = depconf.get('DATA', 'netmode')
-

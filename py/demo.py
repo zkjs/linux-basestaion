@@ -20,6 +20,10 @@ import json
 #from ftplib import FTP
 from func import *
 from var import *
+#import new dependencies
+from depdata import *
+from depconfig import *
+
 import logging
 from logging.handlers import RotatingFileHandler
 
@@ -28,6 +32,8 @@ global reconnect_count
 global lastDiscoveryTime
 global stationMac 
 global cameraReviewed 
+global dataddd
+dataddd={}
 cameraReviewed = False
 threads=[]
 threadID=1
@@ -80,7 +86,7 @@ def reconnect():
     global reconnect_count
     global s
     reconnect_count += 1
-    if reconnect_count>= 2:
+    if reconnect_count>= 3:
         reconnect_count = 0
         try:
             s.close()
@@ -88,7 +94,7 @@ def reconnect():
             print(msg)
         try:
             s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-            s.connect((socketHost,socketPort))
+            s.connect((depHost,depPort))
         except socket.error as msg:
             print(msg)
 
@@ -101,11 +107,52 @@ class ScanDelegate(DefaultDelegate):
 		timestamp = time.time()
 		global lastDiscoveryTime
 		global s
+                global dataddd  #assemble all data before the loop
 		try:
 			for (adtype,desc,value) in dev.getScanData():
 				data[desc]=value
 		except UnicodeDecodeError,e:
 			pass
+                ##::here is new processing using depdata.py codes;
+                if (data.has_key('Manufacturer')) and ( manu_filter(data.get('Manufacturer')) ):
+                    #if match the manufilter then start new processing:
+                    #print('dev+1 %s' % dev.addr )
+                    #u just want update minimum fresh data here
+                    try:
+                        s.send(bytearray.fromhex('01ab02ab'))
+                        dataddd['keyflag']=rawdata_translate(data['Manufacturer'])
+                    #ip need update
+                    except:
+                        print('dev+1 %s' % dev.addr )
+                    local_ip = get_ip_address(depIfip)
+                    dataddd['ip'] = str(local_ip)
+                    dataddd['hexip'] = ''.join([hex(int(i)).lstrip('0x').rjust(2,'0') for i in local_ip.split('.')])
+                    dataddd['bcaddr'] = dev.addr
+                    dataddd['bcmac'] = dev.addr.replace(':','')
+                    dataddd['rssi'] = hex(dev.rssi*(-1)).lstrip('0x').rjust(2,'0')
+                    ## data type 
+                    #if depProt == 'B':
+                    print('%s' % dataddd)
+                    load = gen_bin_data(dataddd)
+                    print('%s' % dataddd)
+                    #else:
+                    #    load = gen_json_data(datad)
+
+                    ## send type
+                    #if depNet == 'S':
+                    try:
+                        s.sendall(load)
+                        print('all xxx sent %s' % load)
+                    except socket.error as msg:
+                        print('socket error %s' % msg)
+                        reconnect()
+                    ##Mqtt not processed
+
+                ## below is old codes
+                ## below is old codes
+                ## below is old codes
+                ## below is old codes
+                ## below is old codes
 		#print "%s，%s" % (data['Manufacturer'],braceletFlag)
 		if (not data.has_key('Manufacturer')) or ( not data['Manufacturer'].startswith(braceletFlag)):
 			return 0
@@ -124,31 +171,31 @@ class ScanDelegate(DefaultDelegate):
 		hex_ip = ''.join([hex(int(i)).lstrip('0x').rjust(2,'0') for i in local_ip.split('.')])
 		temp = 50
 	
-		newdata = 'fefe%s%s%s%s%s%s%s' % (flag,stationMac,hex_ip,dev.addr.replace(':',''),hex(dev.rssi*(-1)).lstrip('0x').rjust(2,'0'),electricity,hex(temp).lstrip('0x').rjust(2,'0'))
-		BinData = bytearray.fromhex(newdata)
-		newBinData= BinData+checksum(BinData)
-		arrs=[]
-                for e in newBinData:
-                    arrs.append(str(e))
+		#newdata = 'fefe%s%s%s%s%s%s%s' % (flag,stationMac,hex_ip,dev.addr.replace(':',''),hex(dev.rssi*(-1)).lstrip('0x').rjust(2,'0'),electricity,hex(temp).lstrip('0x').rjust(2,'0'))
+		#BinData = bytearray.fromhex(newdata)
+		#newBinData= BinData+checksum(BinData)
+		#arrs=[]
+                #for e in newBinData:
+                #    arrs.append(str(e))
                     #arrs.append(str(struct.unpack('B', e[0])[0]))
                 #print('-'.join(arrs))
                 #newBinData = base64.b16decode(newdata)
 		#print "send bin data: %s, last %s" % (newBinData,checksum(BinData))
 		#send to where
-                try:
+                #try:
                     #re-use present socket link;
                     #rather than close and open a new socket;
                     #this is only happen every 50 fails 
                     #s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
                     #s.connect((socketHost, socketPort))
-                    s.sendall(newBinData)
-                    print('-'.join(arrs))
+                   # s.sendall(newBinData)
+                  #  print('-'.join(arrs))
                     #s.close()
-                except socket.error as msg:
+               # except socket.error as msg:
                     #s.close()
-                    global reconnect_count
-                    print('%s(%s)' % (msg, reconnect_count))
-                    reconnect()
+                #    global reconnect_count
+                #    print('%s(%s)' % (msg, reconnect_count))
+                #    reconnect()
 
 		#rc = s.recv(1024)
 		#print rc
@@ -448,9 +495,11 @@ if __name__=='__main__':
 
 	global lastDiscoveryTime
 	global s
+        #global dataddd
+        dataddd = get_empty_datadict()
 	s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         try:
-            s.connect((socketHost,socketPort))
+            s.connect((depHost,depPort))
             s.setblocking(0)
         except socket.error as msg:
 	    print "socket error:"
