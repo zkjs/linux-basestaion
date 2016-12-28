@@ -16,6 +16,7 @@ position_t = position
 cmd_t = ap
 common_t = common
 call_t = nursecall
+heartbeat_t = apstate 
 
 [SOCKET]
 #host = 47.88.15.107
@@ -42,6 +43,7 @@ thread_mqtt_keepalive_time = 130
 thread_mqtt_sender_position_sleeptime = 1.0
 thread_mqtt_sender_call_sleeptime = 0
 thread_timer_control_blescan_flag_sleeptime = 10.0
+thread_heartbeat_sleeptime = 5.0
 main_scanner_scantime = 1.0
 
 [camera]
