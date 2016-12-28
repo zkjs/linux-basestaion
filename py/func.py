@@ -1,9 +1,11 @@
 #! /usr/bin/python
 # -*- coding: utf-8 -*-
 #import uuid
-import uuid, fcntl, struct
+import uuid
+import fcntl 
+import struct
 import random
-import socket,fcntl
+import socket
 import hashlib,urllib
 import os,sys,time
 import tarfile
@@ -51,7 +53,7 @@ def restart_program():
 def md5sum(fname):
     """ 计算文件的MD5值
     """
-   def read_chunks(fh):
+    def read_chunks(fh):
         fh.seek(0)
         chunk = fh.read(8096)
         while chunk:

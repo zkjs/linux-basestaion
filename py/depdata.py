@@ -23,8 +23,10 @@ def get_empty_datadict():
     datadict={}
     datadict['keyflag'] = KEY_HEARTBEAT
     datadict['bsmac'] = get_mac_address()
-    datadict['ip'] = get_ip_address(depIfip)
-    local_ip = get_ip_address(depIfip)
+    ipname = '%s%s' % (depIfip, get_mac_address())
+    datadict['ip'] = get_ip_address(ipname)
+    
+    local_ip = get_ip_address(ipname)
     datadict['hexip'] = ''.join([hex(int(i)).lstrip('0x').rjust(2,'0') for i in local_ip.split('.')])
     datadict['bcmac'] = '010000000000'  #null bc mac;
     datadict['rssi'] = '63' #-99 predefined
@@ -56,11 +58,11 @@ def alarm_update(bcid, flag):
             print('cache error')
             return False
         return False
-    elif f == KEY_ALARM and alarm_cache[bc] >=5 :
+    elif f == KEY_ALARM and alarm_cache[bc] >=6 :
         alarm_cache[bc]=0
         print('binding triggered')
         return True
-    elif f == KEY_ALARM and alarm_cache[bc] < 5:
+    elif f == KEY_ALARM and alarm_cache[bc] < 6:
         try:
             alarm_cache[bc] += 1
         except:

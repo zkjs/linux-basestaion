@@ -130,9 +130,9 @@ class ScanDelegate(DefaultDelegate):
                         print('dev+1 %s' % dev.addr )
                     if alarm_update(dev.addr.replace(':',''), dataddd['keyflag']):
                         dataddd['keyflag'] = KEY_BINDING
-                    local_ip = get_ip_address(depIfip)
-                    dataddd['ip'] = str(local_ip)
-                    dataddd['hexip'] = ''.join([hex(int(i)).lstrip('0x').rjust(2,'0') for i in local_ip.split('.')])
+                    #local_ip = get_ip_address(depIfip)
+                    #dataddd['ip'] = str(local_ip)
+                    #dataddd['hexip'] = ''.join([hex(int(i)).lstrip('0x').rjust(2,'0') for i in local_ip.split('.')])
                     dataddd['bcaddr'] = dev.addr
                     dataddd['bcmac'] = dev.addr.replace(':','')
                     dataddd['rssi'] = hex(dev.rssi*(-1)).lstrip('0x').rjust(2,'0')
