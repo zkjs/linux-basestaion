@@ -85,12 +85,13 @@ def reconnect():
         try:
             s.close()
         except socket.error as msg:
-            print(msg)
+            print"reconnect error : %s " % (msg,)
         try:
             s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
             s.connect((socketHost,socketPort))
         except socket.error as msg:
-            print(msg)
+            #print(msg)
+            print"reconnect error : %s " % (msg,)
 
 class ScanDelegate(DefaultDelegate):
         def __init__(self):
@@ -356,7 +357,7 @@ def update_self(filename,md5_sum,version,ip=MQTTServer,port=8000,ran=600):
 	try:
 		rdl = download(filename,md5_sum,ip,port,ran)
 	except Exception,e:
-		print Exception,e
+		print "download got error : %s, %s " % (Exception,e)
 		
 	if rdl['status'] == 'OK':
 		print "\033[0;32;40mDownload %s Successfully...\033[0m" % (filename,)
@@ -430,7 +431,27 @@ class MqttClient(threading.Thread):
 			#time.sleep(self.sleeptime)
 
 		
+class heartBeat(threading.Thread):
+	def __init__(self,threadID,name,heartbeatSleeptime):
+		threading.Thread.__init__(self)
+		self.threadID = threadID
+		self.name = name
+		self.heartbeatSleeptime = heartbeatSleeptime
+	def run(self):
+		global stationAlias
+		global version
+		global starttime
+		heartbeat = get_system_info()
+		heartbeat['version'] = version
+		heartbeat['bsid'] = stationAlias
+		nowtime = time.time()
+		heartbeat['script_uptime'] = "%s mins" % (str(round(nowtime-starttime,1)),)
+		while True:
+			client.publish(HEARTBEATTITLE,json.dumps(heartbeat))
+			time.sleep(heartbeatSleeptime)
 if __name__=='__main__':
+	global starttime
+	starttime=time.time()
 	Watcher()
 	client = mqtt.Client(client_id=stationAlias,clean_session=False)
 	thread1 = MqttClient(1,'thread1',on_connect,on_message,on_disconnect,MQTTServer,MQTTPort,mqttClientKeepAliveTime,mqttClientLoopSleepTime,mqttClientLoopTimeout)
@@ -439,6 +460,8 @@ if __name__=='__main__':
 	thread2.start()
 	thread3 = MqttSender(3,'thread3',POSITIONTITLE,positionQ,positionSenderSleeptime)
 	thread3.start()
+	thread4 = heartBeat(4,'thread4',heartbeatSleeptime)
+	thread4.start()
 	#listen to zeroconf to check if mqtt server change
 
 	# just for debug
@@ -453,8 +476,8 @@ if __name__=='__main__':
             s.connect((socketHost,socketPort))
             s.setblocking(0)
         except socket.error as msg:
-	    print "socket error:"
-            print(msg)
+	    print "socket error:%s" % (msg,)
+            #print(msg)
         reconnect_count = 0
 
 	lastDiscoveryTime=0

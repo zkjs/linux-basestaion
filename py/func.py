@@ -3,8 +3,8 @@
 import uuid
 import random
 import socket,fcntl
-import hashlib,urllib
-import os,sys,time
+import hashlib,urllib,struct
+import os,sys,time,commands
 import tarfile
 import picamera
 import requests
@@ -18,15 +18,19 @@ def get_ip_address(ifname):
         0x8915,  # SIOCGIFADDR
         struct.pack('256s', ifname[:15])
     )[20:24])
-    except:
+    except Exception,e:
+	print Exception,e
         res = '127.0.0.1'
     return res
 
 
-def get_mac_address(): 
+def get_mac_address(*args): 
     mac=uuid.UUID(int = uuid.getnode()).hex[-12:] 
-    return "".join([mac[e:e+2] for e in range(0,11,2)])
-
+    if len(args)>0:
+	deli = args[0]
+    else:
+	deli = ''
+    return deli.join([mac[e:e+2] for e in range(0,11,2)])
 
 def checksum(b):
     sum = 0
@@ -126,18 +130,26 @@ def cur_file_dir():
          return os.path.dirname(path)
 
 def take_photo(filename,filedir,picResolutionV,picResolutionH,cameraReviewed,hottime):
-	camera = picamera.PiCamera()
+	try:
+		camera = picamera.PiCamera()
 	#print pic
-	camera.resolution = (picResolutionH,picResolutionV)
-	if not cameraReviewed:
-		camera.start_preview()
-		time.sleep(hottime)
-		camera.capture('%s/%s/%s' % (cur_file_dir(),filedir,filename,))
-		camera.stop_preview()
-		#cameraReviewed = True
+	except Exception,e:
+		#log sth
+		#camera.close()
+		print "Error from take_photo: %s, %s " % (Exception,e)
+		return False
 	else:
-		camera.capture('%s/%s/%s' % (cur_file_dir(),filedir,filename,))
-	camera.close()
+		camera.resolution = (picResolutionH,picResolutionV)
+		if not cameraReviewed:
+			camera.start_preview()
+			time.sleep(hottime)
+			camera.capture('%s/%s/%s' % (cur_file_dir(),filedir,filename,))
+			camera.stop_preview()
+			#cameraReviewed = True
+		else:
+			camera.capture('%s/%s/%s' % (cur_file_dir(),filedir,filename,))
+		camera.close()
+		return True
 
 def send_photo(filename,filedir,ip,port,bsid,bcid,now):
 	pic = open('%s/%s/%s' % (cur_file_dir(),filedir,filename))
@@ -151,3 +163,98 @@ def send_photo(filename,filedir,ip,port,bsid,bcid,now):
 	if res.status_code == 200 :
 		os.remove('%s/%s/%s' % (cur_file_dir(),filedir,filename))
 		return True
+def get_cpu_temp():
+	tempFile = open( "/sys/class/thermal/thermal_zone0/temp" )
+	cpu_temp = tempFile.read()
+	tempFile.close()
+	return round(float(cpu_temp)/1000,1)
+
+def get_gpu_temp():
+	gpu_temp = commands.getoutput( '/opt/vc/bin/vcgencmd measure_temp' ).replace( 'temp=', '' ).replace( '\'C', '' )
+	return  round(float(gpu_temp),1)
+
+def has_camera():
+        try:
+                c = picamera.PiCamera()
+        except Exception,e:
+                return False
+        else:
+		c.close()
+                return True
+
+def getRAMinfo():
+	p = os.popen('free')
+	v = os.popen('free -V')
+	i = 0
+	while 1:
+		i = i + 1
+		line = p.readline()
+		if i==2:
+			b = line.split()[1:6]
+			b.append(v.readline())
+			return b
+def getCPUuse():
+	return(str(os.popen("top -n1 | awk '/Cpu\(s\):/ {print $2}'").readline().strip()))
+
+
+def getDiskSpace():
+	p = os.popen("df -h /")
+	i = 0
+	while 1:
+		i = i +1
+		line = p.readline()
+		if i==2:
+			return(line.split()[1:5])
+
+def osUptime():
+	t = os.popen('cat /proc/uptime')
+	sec = t.readline().split()[0]
+	return round(float(sec)/60.0,1)
+
+def get_system_info():
+        heartbeatInfo = {}
+        CPU_usage = getCPUuse()
+
+        RAM_stats = getRAMinfo()
+        RAM_total = round(int(RAM_stats[0]) / 1000,1)
+        RAM_used = round(int(RAM_stats[1]) / 1000 + int(RAM_stats[4])/1000,1)
+        RAM_free = round(int(RAM_stats[2]) / 1000,1)
+        RAM_bufcch = round(int(RAM_stats[4])/ 1000,1)
+        free_version = RAM_stats[5]
+        # Disk information
+        DISK_stats = getDiskSpace()
+        DISK_total = DISK_stats[0]
+        DISK_used = DISK_stats[1]
+        DISK_perc = DISK_stats[3]
+
+        #stationID,scriptversion,mqtt listening
+
+        heartbeatInfo['ip'] = get_ip_address('wlan0')
+        heartbeatInfo['mac'] = get_mac_address(':')
+        temp = {}
+        heartbeatInfo['temp'] = temp
+        temp['cpu'] = str(get_cpu_temp())
+        #temp['gpu'] = str(get_gpu_temp())
+        heartbeatInfo['timestamp'] = int(time.time())
+
+        heartbeatInfo['features'] = []
+        if has_camera():
+                heartbeatInfo['features'].append('camera')
+        #heartbeatInfo['hasCamera'] = str(has_camera())
+        heartbeatInfo['cpu_load'] = "%s %s" % (CPU_usage,"%")
+        RamInfo = {}
+        heartbeatInfo['ram'] = RamInfo
+        RamInfo['total'] = "%s %s" % (str(RAM_total),'MB')
+        RamInfo['used'] = "%s %s" % (str(RAM_used),'MB')
+        RamInfo['free'] = "%s %s" % (str(RAM_free),'MB')
+        RamInfo['buffcache'] = "%s %s" % (str(RAM_bufcch),'MB')
+        RamInfo['used_perc'] = "%s %s" % (str(round(RAM_used/RAM_total*100,1)),'%')
+        DiskInfo = {}
+        heartbeatInfo['DiskInfo'] = DiskInfo
+        DiskInfo['DiskTotal'] = "%s%s" % (str(DISK_total),'B')
+        DiskInfo['DiskUsed'] = "%s%s" % (str(DISK_used),'B')
+        DiskInfo['DiskUsedPerc'] =  str(DISK_perc)
+        heartbeatInfo['os_uptime'] = "%s min" % (str(osUptime()),)
+
+        #print json.dumps(heartbeatInfo,indent=4)
+        return heartbeatInfo
