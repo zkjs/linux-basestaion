@@ -343,14 +343,15 @@ def runcmd2(data):
 				#if not cameraReviewed:
 				#	cameraReviewed = True
 				try:
-					take_photo(filename,picUploadDir,picResolutionV,picResolutionH,cameraReviewed,hottime)
+					re = take_photo(filename,picUploadDir,picResolutionV,picResolutionH,cameraReviewed,hottime)
 				except Exception,e:
 					print "\033[0;32;40m Capture get Exception:%s:%s\033[0m" % (Exception,e)
 				else:
-					send_photo(filename,picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
-					print "\033[0;32;40mtake_photo suc\033[0m"
-					if not cameraReviewed:
-						cameraReviewed = True
+					if re:
+						send_photo(filename,picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
+						print "\033[0;32;40mtake_photo suc\033[0m"
+						if not cameraReviewed:
+							cameraReviewed = True
 
 #def update_self(ip=MQTTServer,port=8000,ran=600,filename,md5_sum,version):
 def update_self(filename,md5_sum,version,ip=MQTTServer,port=8000,ran=600):
@@ -441,16 +442,18 @@ class heartBeat(threading.Thread):
 		global stationAlias
 		global version
 		global starttime
+		global hasCamera
 		heartbeat = get_system_info()
 		heartbeat['version'] = version
 		heartbeat['bsid'] = stationAlias
-		nowtime = time.time()
-		heartbeat['script_uptime'] = "%s mins" % (str(round(nowtime-starttime,1)),)
 		while True:
+			nowtime = time.time()
+			heartbeat['script_uptime'] = "%s mins" % (str(round((nowtime-starttime)/60.0,1)),)
 			client.publish(HEARTBEATTITLE,json.dumps(heartbeat))
 			time.sleep(heartbeatSleeptime)
 if __name__=='__main__':
 	global starttime
+	global hasCamera
 	starttime=time.time()
 	Watcher()
 	client = mqtt.Client(client_id=stationAlias,clean_session=False)

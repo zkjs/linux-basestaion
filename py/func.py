@@ -234,7 +234,7 @@ def get_system_info():
         temp = {}
         heartbeatInfo['temp'] = temp
         temp['cpu'] = str(get_cpu_temp())
-        #temp['gpu'] = str(get_gpu_temp())
+        temp['gpu'] = str(get_gpu_temp())
         heartbeatInfo['timestamp'] = int(time.time())
 
         heartbeatInfo['features'] = []
