@@ -331,10 +331,10 @@ def runcmd2(data):
 			print "\033[0;32;40m cannot conver cmd %s to json\033[0m" % (data,)
 
 		if cmd['cmd'] == 'capture' :
-			print "\033[0;32;40m capture cmd received\033[0m"
+			print "\033[0;32;40m capture cmd2 received\033[0m"
 			#get photo
 			if cmd['ap'] == stationAlias :
-				print "\033[0;32;40m capture cmd received and going to capture\033[0m"
+				print "\033[0;32;40m capture cmd2 received and going to capture\033[0m"
 				print "\033[0;32;40m H:%s, %s ; V:%s, %s\033[0m" % (picResolutionH,type(picResolutionH),picResolutionV,type(picResolutionV))
 				now = int(time.time())
 				filename = '%s_%s.jpg' % (cmd['bracelet'],now)
@@ -343,15 +343,17 @@ def runcmd2(data):
 				#if not cameraReviewed:
 				#	cameraReviewed = True
 				try:
-					re = take_photo(filename,picUploadDir,picResolutionV,picResolutionH,cameraReviewed,hottime)
+					take_photo(filename,picUploadDir,picResolutionV,picResolutionH,cameraReviewed,hottime)
+					#print "\033[0;32;40m Capture ? %s " % (re,)
 				except Exception,e:
 					print "\033[0;32;40m Capture get Exception:%s:%s\033[0m" % (Exception,e)
 				else:
-					if re:
-						send_photo(filename,picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
-						print "\033[0;32;40mtake_photo suc\033[0m"
-						if not cameraReviewed:
-							cameraReviewed = True
+					#print "\033[0;32;40m Capture ? %s " % (re,)
+					#if re:
+					send_photo(filename,picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
+					print "\033[0;32;40mtake_photo suc\033[0m"
+					if not cameraReviewed:
+						cameraReviewed = True
 
 #def update_self(ip=MQTTServer,port=8000,ran=600,filename,md5_sum,version):
 def update_self(filename,md5_sum,version,ip=MQTTServer,port=8000,ran=600):
@@ -459,8 +461,8 @@ if __name__=='__main__':
 	client = mqtt.Client(client_id=stationAlias,clean_session=False)
 	thread1 = MqttClient(1,'thread1',on_connect,on_message,on_disconnect,MQTTServer,MQTTPort,mqttClientKeepAliveTime,mqttClientLoopSleepTime,mqttClientLoopTimeout)
 	thread1.start()
-	thread2 = MqttListener(2,'command',commandQ)
-	thread2.start()
+	#thread2 = MqttListener(2,'command',commandQ)
+	#thread2.start()
 	thread3 = MqttSender(3,'thread3',POSITIONTITLE,positionQ,positionSenderSleeptime)
 	thread3.start()
 	thread4 = heartBeat(4,'thread4',heartbeatSleeptime)

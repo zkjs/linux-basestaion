@@ -136,7 +136,7 @@ def take_photo(filename,filedir,picResolutionV,picResolutionH,cameraReviewed,hot
 	except Exception,e:
 		#log sth
 		#camera.close()
-		print "Error from take_photo: %s, %s " % (Exception,e)
+		print "\033[0;32;40mError from take_photo: %s, %s \033[0m" % (Exception,e)
 		return False
 	else:
 		camera.resolution = (picResolutionH,picResolutionV)
