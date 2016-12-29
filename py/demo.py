@@ -357,6 +357,7 @@ def runcmd2(data):
 
 #def update_self(ip=MQTTServer,port=8000,ran=600,filename,md5_sum,version):
 def update_self(filename,md5_sum,version,ip=MQTTServer,port=8000,ran=600):
+	global stationAlias
 	try:
 		rdl = download(filename,md5_sum,ip,port,ran)
 	except Exception,e:
@@ -367,8 +368,10 @@ def update_self(filename,md5_sum,version,ip=MQTTServer,port=8000,ran=600):
 		rdp = deploy(filename)
 		if rdp['status'] == 'OK':
 			print "\033[0;32;40mDeploy Successfully...\nPreparing to remove the %s restart the program...\033[0m" % (filename,)
-			if os.path.exist(filename):
+			if os.path.exists(filename):
 				os.remove(filename)
+			#write back the alias ID
+			write_conf('station','alias',stationAlias)
 			restart_program()
 		else:
 			#TODO
