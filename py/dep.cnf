@@ -1,6 +1,6 @@
 [SOCKET]
-host = 192.168.2.146
-port = 8090
+host = 192.168.43.150
+port = 8555
 ifnameip = enx
 
 [DATA]

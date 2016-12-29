@@ -32,8 +32,8 @@ def get_empty_datadict():
     datadict['rssi'] = '63' #-99 predefined
     datadict['srssi'] = 99 #99 in int
     datadict['battery'] = '64' #battery level=100
-    datadict['temp']= '50' #hex temp
-    datadict['reserved'] = '010001000100' #predefined fixed reserved bytes
+    datadict['temp']= '23' #hex temp 0 -50/ 0x23 = 35/5 = 7
+    datadict['reserved'] = '000000000000' #predefined fixed reserved bytes
     datadict['bsmacfull'] = get_mac_address_full()
     datadict['bcaddr'] = '01:00:00:00:00:00' #predefined null bcaddr for json
     print('datadict built %s' % datadict )
@@ -50,6 +50,8 @@ def alarm_update(bcid, flag):
     #position cache for time, alarm cache for counts for each bcid
     bc = str(bcid)
     f= flag
+    if alarm_cache.get(bc) == None:
+        alarm_cache[bc] = 0
     #print('alarm_update init')
     if f == KEY_HEARTBEAT:
         try:
@@ -114,7 +116,7 @@ def gen_bin_data(datadict):
         bindata = bytearray.fromhex(hexdata)
     except:
         print('bindata = %s' % datadict)
-        return bytearray.fromhex('ab01ab33')
+        return bytearray.fromhex('20222733')
     return bindata  + checksum(bindata[2::])
 
 def gen_json_data(datadict):
