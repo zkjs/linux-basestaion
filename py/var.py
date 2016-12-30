@@ -10,12 +10,13 @@ from func import cur_file_dir
 #         return os.path.dirname(path)
 conf = ConfigParser.ConfigParser()
 conf.read('%s/%s'% (cur_file_dir(),'t.cnf'))
-version = float(conf.get('station','version'))
+version = round(float(conf.get('station','version')),1)
 
 POSITIONTITLE = conf.get("MQTT","position_t")
 CMDTITLE = conf.get("MQTT","cmd_t")
 CALLTITLE = conf.get("MQTT","call_t")
 COMMONTITLE = conf.get("MQTT","common_t")
+HEARTBEATTITLE = conf.get("MQTT","heartbeat_t")
 PositionQueueLength = int(conf.get("queue",'position_l'))
 CommandQueueLength = int(conf.get("queue",'cmd_l'))
 CallQueueLength = int(conf.get("queue","call_l"))
@@ -31,6 +32,7 @@ stationAlias=conf.get('station','alias')
 mqttClientKeepAliveTime = int(conf.get('time','thread_mqtt_keepalive_time'))
 mqttClientLoopSleepTime = float(conf.get('time','thread_mqtt_loop_sleeptime'))
 mqttClientLoopTimeout = float(conf.get('time','thread_mqtt_loop_timeout'))
+heartbeatSleeptime = float(conf.get('time','thread_heartbeat_sleeptime'))
 cmdSleepTime = float(conf.get('time','thread_cmd_sleep_time'))
 positionSenderSleeptime = float(conf.get('time','thread_mqtt_sender_position_sleeptime'))
 scannerScanTime = float(conf.get('time','main_scanner_scantime'))
@@ -54,7 +56,15 @@ picUploadPort = conf.get('camera','upload_port')
 picUploadDir = conf.get('camera','tmp_dir')
 hottime = float(conf.get('camera','hottime'))
 def write_conf(node,key,value):
-	fh = open('t.cnf','w')
-	conf.set(node,key,value)
-	fh.close()
-	conf.write(fh)
+	try:
+		fh = open('t.cnf','w')
+		conf.set(node,key,value)
+		conf.write(fh)
+	except:
+		#log sth
+		return False
+	else:
+		return True
+	finally:
+		fh.close()
+		
