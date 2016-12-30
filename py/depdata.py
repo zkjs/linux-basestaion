@@ -60,11 +60,11 @@ def alarm_update(bcid, flag):
             print('cache error')
             return False
         return False
-    elif f == KEY_ALARM and alarm_cache[bc] >=6 :
+    elif f == KEY_ALARM and alarm_cache[bc] >=3 :
         alarm_cache[bc]=0
         print('binding triggered')
         return True
-    elif f == KEY_ALARM and alarm_cache[bc] < 6:
+    elif f == KEY_ALARM and alarm_cache[bc] < 3:
         try:
             alarm_cache[bc] += 1
         except:
