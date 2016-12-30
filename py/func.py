@@ -53,6 +53,11 @@ def restart_program():
     saving data) must be done before calling this function."""  
     python = sys.executable  
     os.execl(python, python, * sys.argv)  
+    #os.execl("/usr/bin/sudo",  python, * sys.argv)  
+
+def restart_raspi():
+    os.system('shutdown -r 1')
+
 
 def md5sum(fname):
     """ 计算文件的MD5值
@@ -91,7 +96,9 @@ def download(filename,md5_sum,ip,port,ran):
 		print "\033[0;32;40m download suc\033[0m "
 	except Exception,e:
 		print "\033[0;32;40m download ERROR %s:%s\033[0m" % (Exception,e)
+		client.publish('ap','download error %s,%s' % (Exception,e))
 		return {'status':'Error','Info':"cannot download file %s:%s,%s" % (filename,Exception,e)}
+		
 	md5OfFile = md5sum(filename)
 	if md5OfFile == md5_sum:
 		print "\033[0;32;40m download md5 check ok\033[0m "
@@ -241,8 +248,8 @@ def get_system_info():
         heartbeatInfo['timestamp'] = int(time.time())
 
         heartbeatInfo['features'] = []
-        if has_camera():
-                heartbeatInfo['features'].append('camera')
+        #if has_camera():
+        #        heartbeatInfo['features'].append('camera')
         #heartbeatInfo['hasCamera'] = str(has_camera())
         heartbeatInfo['cpu_load'] = "%s %s" % (CPU_usage,"%")
         RamInfo = {}
