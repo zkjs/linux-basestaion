@@ -117,6 +117,7 @@ def gen_bin_data(datadict):
     except:
         print('bindata = %s' % datadict)
         return bytearray.fromhex('20222733')
+
     return bindata  + checksum(bindata[2::])
 
 def gen_json_data(datadict):

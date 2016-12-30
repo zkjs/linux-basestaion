@@ -1,7 +1,7 @@
 [SOCKET]
-host = 172.20.1.254
-port = 8090
-ifnameip = enx
+host = 192.168.43.150
+port = 8555
+ifnameip = eth0
 
 [DATA]
 type = B

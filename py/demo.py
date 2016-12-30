@@ -556,13 +556,9 @@ if __name__=='__main__':
 	global lastDiscoveryTime
 	global s
 
-
-
-
-        dataddd = get_empty_datadict()
-
 	print "\033[0;32;40mbefore socket\033[0m"
 
+  dataddd = get_empty_datadict()
 	s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         try:
             s.connect((depHost,depPort))
