@@ -35,6 +35,7 @@ stationMac = get_mac_address()
 positionQ= Queue.Queue(PositionQueueLength)
 commandQ = Queue.Queue(CommandQueueLength)
 callQ = Queue.Queue(CallQueueLength)
+print "\033[0;32;40m %d\033[0m" % (os.geteuid(),)
 
 class Watcher:
     """this class solves two problems with multithreaded 
@@ -299,6 +300,7 @@ def runcmd2(data):
 	#print "\033[0;32;40m runcmd2  \033[0m" 
 	global MQTTServer,MQTTPort
 	global cameraReviewed 
+	global hasCamera
 	#print "\033[0;32;40m looping in runcmd %s while \033[0m"  % (q,)
 	print "\033[0;32;40m runcmd2 get %s \033[0m"  % (data,)
 	if data.startswith('update'):
@@ -321,7 +323,7 @@ def runcmd2(data):
 				update_self(ArgsDict['f'],ArgsDict['m'],ArgsDict['v'],ArgsDict['i'],ArgsDict['p'],int(ArgsDict['r']))	
 			else:
 				#should log sth
-				print "033[0;32;40m current version : %f, order version :%f\033[0m " % (version,ArgsDict['v'])
+				print "033[0;32;40m current version : %f, order version :%f\033[0m " % (version,float(ArgsDict['v']))
 		except Exception,e:
 			print "\033[0;32;40m get %s:%s\033[0m"  % (Exception,e)
 	else :
@@ -342,18 +344,23 @@ def runcmd2(data):
 				#send_photo(filename,picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
 				#if not cameraReviewed:
 				#	cameraReviewed = True
-				try:
-					take_photo(filename,picUploadDir,picResolutionV,picResolutionH,cameraReviewed,hottime)
-					#print "\033[0;32;40m Capture ? %s " % (re,)
-				except Exception,e:
-					print "\033[0;32;40m Capture get Exception:%s:%s\033[0m" % (Exception,e)
+				if hasCamera:
+					try:
+						take_photo(filename,picUploadDir,picResolutionV,picResolutionH,cameraReviewed,hottime)
+						#print "\033[0;32;40m Capture ? %s " % (re,)
+					except Exception,e:
+						print "\033[0;32;40m Capture get Exception:%s:%s\033[0m" % (Exception,e)
+					else:
+						#print "\033[0;32;40m Capture ? %s " % (re,)
+						#if re:
+						send_photo(filename,picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
+						print "\033[0;32;40mtake_photo suc\033[0m"
+						if not cameraReviewed:
+							cameraReviewed = True
 				else:
-					#print "\033[0;32;40m Capture ? %s " % (re,)
-					#if re:
-					send_photo(filename,picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
-					print "\033[0;32;40mtake_photo suc\033[0m"
-					if not cameraReviewed:
-						cameraReviewed = True
+					#log sth 
+					#return sth to server?
+					pass
 
 #def update_self(ip=MQTTServer,port=8000,ran=600,filename,md5_sum,version):
 def update_self(filename,md5_sum,version,ip=MQTTServer,port=8000,ran=600):
@@ -372,7 +379,8 @@ def update_self(filename,md5_sum,version,ip=MQTTServer,port=8000,ran=600):
 				os.remove(filename)
 			#write back the alias ID
 			write_conf('station','alias',stationAlias)
-			restart_program()
+			restart_raspi()
+			#restart_program()
 		else:
 			#TODO
 			#log sth
@@ -451,6 +459,13 @@ class heartBeat(threading.Thread):
 		heartbeat = get_system_info()
 		heartbeat['version'] = version
 		heartbeat['bsid'] = stationAlias
+		if has_camera():
+			if not heartbeat.has_key('features'):
+				heartbeat['features'] = []
+			heartbeat['features'].append('camera')
+			hasCamera = True
+		else:
+			hasCamera =False
 		while True:
 			nowtime = time.time()
 			heartbeat['script_uptime'] = "%s mins" % (str(round((nowtime-starttime)/60.0,1)),)
@@ -459,17 +474,25 @@ class heartBeat(threading.Thread):
 if __name__=='__main__':
 	global starttime
 	global hasCamera
+	print "\033[0;32;40m %d\033[0m" % (os.geteuid(),)
 	starttime=time.time()
-	Watcher()
+	#Watcher()
 	client = mqtt.Client(client_id=stationAlias,clean_session=False)
 	thread1 = MqttClient(1,'thread1',on_connect,on_message,on_disconnect,MQTTServer,MQTTPort,mqttClientKeepAliveTime,mqttClientLoopSleepTime,mqttClientLoopTimeout)
-	thread1.start()
+	#thread1.start()
+	threads.append(thread1)
+	#thread1.join()
 	#thread2 = MqttListener(2,'command',commandQ)
 	#thread2.start()
 	thread3 = MqttSender(3,'thread3',POSITIONTITLE,positionQ,positionSenderSleeptime)
-	thread3.start()
+	#thread3.start()
+	threads.append(thread3)
 	thread4 = heartBeat(4,'thread4',heartbeatSleeptime)
-	thread4.start()
+	#thread4.start()
+	threads.append(thread4)
+	for i in threads:
+		i.setDaemon(True)
+		i.start()
 	#listen to zeroconf to check if mqtt server change
 
 	# just for debug
@@ -479,6 +502,7 @@ if __name__=='__main__':
 
 	global lastDiscoveryTime
 	global s
+	print "\033[0;32;40mbefore socket\033[0m"
 	s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         try:
             s.connect((socketHost,socketPort))
@@ -486,10 +510,15 @@ if __name__=='__main__':
         except socket.error as msg:
 	    print "socket error:%s" % (msg,)
             #print(msg)
+	print "\033[0;32;40mafter socket\033[0m"
         reconnect_count = 0
 
 	lastDiscoveryTime=0
-	callscanner = Scanner().withDelegate(ScanDelegate())
+	try:
+		callscanner = Scanner().withDelegate(ScanDelegate())
+	except Exception,e:
+		print "\033[0;32;40m main:BLEscanner init:%s,%s\033[0m"  % (Exception,e)
+	print "\033[0;32;40mafter callscanner\033[0m"
 	count =0
 	
 	while True:
@@ -501,6 +530,7 @@ if __name__=='__main__':
 		#	print "send common: %s " % (json.dumps(result),)
 		#	client.publish(COMMONTITLE,json.dumps(result))
 		#	lastDiscoveryTime = now
-            except:
+            except Exception,e:
 		#print e
+		print "\033[0;32;40m main:callscanner:scan %s,%s\033[0m"  % (Exception,e)
                 time.sleep(5)

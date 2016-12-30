@@ -1,6 +1,6 @@
 [station]
 alias = pinky
-version = 1.0 
+version = 1.0
 
 [queue]
 position_l = 10000
