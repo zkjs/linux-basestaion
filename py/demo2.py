@@ -1,5 +1,5 @@
-#/usr/bin/python
 # -*- coding: utf-8 -*-
+#/usr/bin/python
 import Queue,threading,signal,traceback,os
 import time,sys,datetime
 import paho.mqtt.client as mqtt
@@ -7,6 +7,7 @@ import random
 import json
 from bluepy.btle import Scanner,DefaultDelegate
 import uuid
+import ConfigParser
 import socket
 import fcntl
 import struct
@@ -20,30 +21,66 @@ import json
 #from ftplib import FTP
 from func import *
 from var import *
-#import new dependencies
-from depdata import *
-from depconfig import *
-
-import logging
-from logging.handlers import RotatingFileHandler
 
 global stationAlias
 global reconnect_count
 global lastDiscoveryTime
 global stationMac 
 global cameraReviewed 
-global dataddd
-#global alarm_cache
-#alarm_cache = {}
-dataddd={}
 cameraReviewed = False
 threads=[]
 threadID=1
 stationMac = get_mac_address()
-positionQ= Queue.Queue(PositionQueueLength)
-commandQ = Queue.Queue(CommandQueueLength)
-callQ = Queue.Queue(CallQueueLength)
-print "\033[0;32;40m %d\033[0m" % (os.geteuid(),)
+base = [str(x) for x in range(10)] + [ chr(x) for x in range(ord('A'),ord('A')+6)]
+def hex2bin(string_num):
+	dec = int(string_num.upper(),16)
+	mid = []
+	while True:
+		if dec == 0: break
+		dec,rem = divmod(dec, 2)
+		mid.append(base[rem])
+	return ''.join([str(x) for x in mid[::-1]])
+	
+	
+def checksum_old(string):
+	sum = 0
+	tmp = bytearray.fromhex(string)
+	for e in tmp:
+		sum += e
+	r = bytearray.fromhex('{:04x}',format(sum))
+	return cc[-1]
+#checksum based on RFC 
+def checksum(b):
+    sum = 0
+    for e in b:
+        sum += e
+    cc = bytearray.fromhex('{:04x}'.format(sum))
+    b = bytearray([0])
+    n = cc[-1]
+#    b[1]= n & 0xFF
+#    n >>= 8
+    b[0]= n & 0xFF
+    return b
+
+def defined(x):
+	try :
+		type(eval(x))
+	except:
+		return False
+	else:
+		return True
+def get_ip_address(ifname):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    #try to avoid net drop exceptions
+    try: 
+        res = socket.inet_ntoa(fcntl.ioctl(
+        s.fileno(),
+        0x8915,  # SIOCGIFADDR
+        struct.pack('256s', ifname[:15])
+    )[20:24])
+    except:
+        res = '127.0.0.1'
+    return res
 
 class Watcher:
     """this class solves two problems with multithreaded 
@@ -89,18 +126,17 @@ def reconnect():
     global reconnect_count
     global s
     reconnect_count += 1
-    if reconnect_count>= 3:
+    if reconnect_count>= 2:
         reconnect_count = 0
         try:
             s.close()
         except socket.error as msg:
-            print"reconnect error : %s " % (msg,)
+            print(msg)
         try:
             s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-            s.connect((depHost,depPort))
+            s.connect((socketHost,socketPort))
         except socket.error as msg:
-            #print(msg)
-            print"reconnect error : %s " % (msg,)
+            print(msg)
 
 class ScanDelegate(DefaultDelegate):
         def __init__(self):
@@ -111,56 +147,11 @@ class ScanDelegate(DefaultDelegate):
 		timestamp = time.time()
 		global lastDiscoveryTime
 		global s
-                global dataddd  #assemble all data before the loop
 		try:
 			for (adtype,desc,value) in dev.getScanData():
 				data[desc]=value
 		except UnicodeDecodeError,e:
 			pass
-                ##::here is new processing using depdata.py codes;
-                if (data.has_key('Manufacturer')) and ( manu_filter(data.get('Manufacturer')) ):
-                    #if match the manufilter then start new processing:
-                    #print('dev+1 %s' % dev.addr )
-                    #u just want update minimum fresh data here
-                    try:
-                        #s.send(bytearray.fromhex('01ab02ab'))
-                        dataddd['keyflag']=rawdata_translate(data['Manufacturer'])
-                    #    if alarm_update(dev.addr.replace(':',''), dataddd['keyflag']):
-                    #        dataddd['keyflag'] = KEY_BINDING
-                    #ip need update
-                    except:
-                        print('dev+1 %s' % dev.addr )
-                    if alarm_update(dev.addr.replace(':',''), dataddd['keyflag']):
-                        dataddd['keyflag'] = KEY_BINDING
-                    #local_ip = get_ip_address(depIfip)
-                    #dataddd['ip'] = str(local_ip)
-                    #dataddd['hexip'] = ''.join([hex(int(i)).lstrip('0x').rjust(2,'0') for i in local_ip.split('.')])
-                    dataddd['bcaddr'] = dev.addr
-                    dataddd['bcmac'] = dev.addr.replace(':','')
-                    dataddd['rssi'] = hex(dev.rssi*(-1)).lstrip('0x').rjust(2,'0')
-                    dataddd['srssi'] = dev.rssi*(-1)
-                    ## data type 
-                    if depProt == 'B':
-                    #print('%s' % dataddd)
-                        load = gen_bin_data(dataddd)
-                    #print('%s' % dataddd)
-                    else:
-                        load = gen_json_data(dataddd)
-                    ## send type
-                    #if depNet == 'S':
-                    try:
-                        s.send(load)
-                        print('all xxx sent %s' % load)
-                    except socket.error as msg:
-                        print('socket error %s' % msg)
-                        reconnect()
-                    ##Mqtt not processed
-
-                ## below is old codes
-                ## below is old codes
-                ## below is old codes
-                ## below is old codes
-                ## below is old codes
 		#print "%s，%s" % (data['Manufacturer'],braceletFlag)
 		if (not data.has_key('Manufacturer')) or ( not data['Manufacturer'].startswith(braceletFlag)):
 			return 0
@@ -179,9 +170,14 @@ class ScanDelegate(DefaultDelegate):
 		hex_ip = ''.join([hex(int(i)).lstrip('0x').rjust(2,'0') for i in local_ip.split('.')])
 		temp = 50
 	
-		#newdata = 'fefe%s%s%s%s%s%s%s' % (flag,stationMac,hex_ip,dev.addr.replace(':',''),hex(dev.rssi*(-1)).lstrip('0x').rjust(2,'0'),electricity,hex(temp).lstrip('0x').rjust(2,'0'))
-		#BinData = bytearray.fromhex(newdata)
-		#newBinData= BinData+checksum(BinData)
+		#newdata = '%s%s%s%s%s%s' % (data['bcid'],stationAlias,stationMac,dev.addr,flag, electricity)
+		#那拼数据，从包头到温度，ip转十六进制，然后整一串儿倒二进制，最后末端插一位校验和，就成了
+		newdata = 'fefe%s%s%s%s%s%s%s%s' % (flag,stationMac,hex_ip,dev.addr.replace(':',''),hex(dev.rssi*(-1)).lstrip('0x').rjust(2,'0'),electricity,hex(temp).lstrip('0x').rjust(2,'0'), reserved)
+		#print "stationMac: %s local_ip: %s(%s) bcid:%s ,rssi:%s, electricity:%s, temp:%s" % (stationMac,hex_ip,local_ip,dev.addr.replace(':',''),hex(dev.rssi*(-1)),electricity,hex(temp))
+		#print "assem data: %s " % (newdata,)
+		BinData = bytearray.fromhex(newdata)
+		#print "after to bin:%s" % (BinData,)
+                newBinData= BinData+checksum(BinData[2::])
 		#arrs=[]
                 #for e in newBinData:
                 #    arrs.append(str(e))
@@ -190,20 +186,20 @@ class ScanDelegate(DefaultDelegate):
                 #newBinData = base64.b16decode(newdata)
 		#print "send bin data: %s, last %s" % (newBinData,checksum(BinData))
 		#send to where
-                #try:
+                try:
                     #re-use present socket link;
                     #rather than close and open a new socket;
                     #this is only happen every 50 fails 
                     #s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
                     #s.connect((socketHost, socketPort))
-                   # s.sendall(newBinData)
-                  #  print('-'.join(arrs))
+                    s.sendall(newBinData)
+                    print('-'.join(arrs))
                     #s.close()
-               # except socket.error as msg:
+                except socket.error as msg:
                     #s.close()
-                #    global reconnect_count
-                #    print('%s(%s)' % (msg, reconnect_count))
-                #    reconnect()
+                    global reconnect_count
+                    print('%s(%s)' % (msg, reconnect_count))
+                    reconnect()
 
 		#rc = s.recv(1024)
 		#print rc
@@ -222,7 +218,7 @@ class ScanDelegate(DefaultDelegate):
 			lastDiscoveryTime = time.time()
 			return 0
 		positionQ.put(json.dumps(data))
-		print json.dumps(data)
+		#print json.dumps(data)
 		lastDiscoveryTime = time.time()
 
 def on_connect(client,userdata,flags,rc):
@@ -262,6 +258,7 @@ class MyListener(object):
 		#write_conf('MQTT','server',MQTTServer)
 		#write_conf('MQTT','port',MQTTPort)
 
+>>>>>>> littlepinkyl:py/demo.py
 class MqttSender(threading.Thread):
 	def __init__(self,threadID,name,title,q,sleeptime):
 		threading.Thread.__init__(self)
@@ -291,7 +288,6 @@ def senddata(threadName,title,q,sleeptime):
 			data = q.get()
 			#print "\033[0;32;40m send data\033[0m"	
 			client.publish(title,data)
-			print "sended %s " % (data,)
 		if sleeptime > 0:
 			time.sleep(sleeptime)
 
@@ -340,22 +336,17 @@ def runcmd(threadName,q):
 						print "\033[0;32;40m capture cmd received and going to capture\033[0m"
 						print "\033[0;32;40m H:%s, %s ; V:%s, %s\033[0m" % (picResolutionH,type(picResolutionH),picResolutionV,type(picResolutionV))
 						now = int(time.time())
-						try:
-							take_photo('tmp.jpg',picUploadDir,picResolutionV,picResolutionH,hottime)
-						except Exception,e:
-							print "\033[0;32;40m get %s:%s\033[0m" (Exception,e)
-						else:
-							send_photo('tmp.jpg',picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
+						take_photo('tmp.jpg',picUploadDir,picResolutionV,picResolutionH,hottime)
+						send_photo('tmp.jpg',picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
 		time.sleep(10.0)
 
 def runcmd2(data):
 	
-	#print "\033[0;32;40m runcmd2  \033[0m" 
+	print "\033[0;32;40m runcmd2  \033[0m" 
 	global MQTTServer,MQTTPort
 	global cameraReviewed 
-	global hasCamera
 	#print "\033[0;32;40m looping in runcmd %s while \033[0m"  % (q,)
-	print "\033[0;32;40m runcmd2 get %s \033[0m"  % (data,)
+	print "\033[0;32;40m get %s from queue\033[0m"  % (data,)
 	if data.startswith('update'):
 		print "\033[0;32;40mget cmd as %s \033[0m" % (data,)
 		#parse args update -f[filename]* -m[md5_sum]* -i[ip/domain] -p[port]*  -r[random range] -v[version]*
@@ -376,7 +367,7 @@ def runcmd2(data):
 				update_self(ArgsDict['f'],ArgsDict['m'],ArgsDict['v'],ArgsDict['i'],ArgsDict['p'],int(ArgsDict['r']))	
 			else:
 				#should log sth
-				print "033[0;32;40m current version : %f, order version :%f\033[0m " % (version,float(ArgsDict['v']))
+				print "033[0;32;40m current version : %f, order version :%f\033[0m " % (version,ArgsDict['v'])
 		except Exception,e:
 			print "\033[0;32;40m get %s:%s\033[0m"  % (Exception,e)
 	else :
@@ -386,54 +377,31 @@ def runcmd2(data):
 			print "\033[0;32;40m cannot conver cmd %s to json\033[0m" % (data,)
 
 		if cmd['cmd'] == 'capture' :
-			print "\033[0;32;40m capture cmd2 received\033[0m"
+			print "\033[0;32;40m capture cmd received\033[0m"
 			#get photo
 			if cmd['ap'] == stationAlias :
-				print "\033[0;32;40m capture cmd2 received and going to capture\033[0m"
+				print "\033[0;32;40m capture cmd received and going to capture\033[0m"
 				print "\033[0;32;40m H:%s, %s ; V:%s, %s\033[0m" % (picResolutionH,type(picResolutionH),picResolutionV,type(picResolutionV))
 				now = int(time.time())
 				filename = '%s_%s.jpg' % (cmd['bracelet'],now)
-				#take_photo(filename,picUploadDir,picResolutionV,picResolutionH,cameraReviewed,hottime)
-				#send_photo(filename,picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
-				#if not cameraReviewed:
-				#	cameraReviewed = True
-				if hasCamera:
-					try:
-						take_photo(filename,picUploadDir,picResolutionV,picResolutionH,cameraReviewed,hottime)
-						#print "\033[0;32;40m Capture ? %s " % (re,)
-					except Exception,e:
-						print "\033[0;32;40m Capture get Exception:%s:%s\033[0m" % (Exception,e)
-					else:
-						#print "\033[0;32;40m Capture ? %s " % (re,)
-						#if re:
-						send_photo(filename,picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
-						print "\033[0;32;40mtake_photo suc\033[0m"
-						if not cameraReviewed:
-							cameraReviewed = True
-				else:
-					#log sth 
-					#return sth to server?
-					pass
+				take_photo(filename,picUploadDir,picResolutionV,picResolutionH,cameraReviewed,hottime)
+				send_photo(filename,picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
 
 #def update_self(ip=MQTTServer,port=8000,ran=600,filename,md5_sum,version):
 def update_self(filename,md5_sum,version,ip=MQTTServer,port=8000,ran=600):
-	global stationAlias
 	try:
 		rdl = download(filename,md5_sum,ip,port,ran)
 	except Exception,e:
-		print "download got error : %s, %s " % (Exception,e)
+		print Exception,e
 		
 	if rdl['status'] == 'OK':
 		print "\033[0;32;40mDownload %s Successfully...\033[0m" % (filename,)
 		rdp = deploy(filename)
 		if rdp['status'] == 'OK':
 			print "\033[0;32;40mDeploy Successfully...\nPreparing to remove the %s restart the program...\033[0m" % (filename,)
-			if os.path.exists(filename):
+			if os.path.exist(filename):
 				os.remove(filename)
-			#write back the alias ID
-			write_conf('station','alias',stationAlias)
-			restart_raspi()
-			#restart_program()
+			restart_program()
 		else:
 			#TODO
 			#log sth
@@ -482,70 +450,24 @@ class MqttClient(threading.Thread):
 		self.sleeptime = sleeptime
 		self.timeout = timeout
 	def run(self):
-		global MQTTServer
-		global MQTTPort
 		client.on_connect = on_connect
 		client.on_message = on_message
 		client.connect(self.server,self.port,self.alivetime)
 		#client.loop_forever(timeout=self.timeout)
 		while True:
-			#if MQTTServer != self.server or MQTTPort != self.port:
-			#	disconnect()
-			#	self.server = MQTTServer
-			#	self.port = MQTTPort
-			#	client.connect(self.server,self.port,self.alivetime)
 			client.loop(timeout=self.timeout)
 			#time.sleep(self.sleeptime)
 
 		
-class heartBeat(threading.Thread):
-	def __init__(self,threadID,name,heartbeatSleeptime):
-		threading.Thread.__init__(self)
-		self.threadID = threadID
-		self.name = name
-		self.heartbeatSleeptime = heartbeatSleeptime
-	def run(self):
-		global stationAlias
-		global version
-		global starttime
-		global hasCamera
-		heartbeat = get_system_info()
-		heartbeat['version'] = version
-		heartbeat['bsid'] = stationAlias
-		if has_camera():
-			if not heartbeat.has_key('features'):
-				heartbeat['features'] = []
-			heartbeat['features'].append('camera')
-			hasCamera = True
-		else:
-			hasCamera =False
-		while True:
-			nowtime = time.time()
-			heartbeat['script_uptime'] = "%s mins" % (str(round((nowtime-starttime)/60.0,1)),)
-			client.publish(HEARTBEATTITLE,json.dumps(heartbeat))
-			time.sleep(heartbeatSleeptime)
 if __name__=='__main__':
-	global starttime
-	global hasCamera
-	print "\033[0;32;40m %d\033[0m" % (os.geteuid(),)
-	starttime=time.time()
-	#Watcher()
+	Watcher()
 	client = mqtt.Client(client_id=stationAlias,clean_session=False)
 	thread1 = MqttClient(1,'thread1',on_connect,on_message,on_disconnect,MQTTServer,MQTTPort,mqttClientKeepAliveTime,mqttClientLoopSleepTime,mqttClientLoopTimeout)
-	#thread1.start()
-	threads.append(thread1)
-	#thread1.join()
-	#thread2 = MqttListener(2,'command',commandQ)
-	#thread2.start()
+	thread1.start()
+	thread2 = MqttListener(2,'command',commandQ)
+	thread2.start()
 	thread3 = MqttSender(3,'thread3',POSITIONTITLE,positionQ,positionSenderSleeptime)
-	#thread3.start()
-	threads.append(thread3)
-	thread4 = heartBeat(4,'thread4',heartbeatSleeptime)
-	#thread4.start()
-	threads.append(thread4)
-	for i in threads:
-		i.setDaemon(True)
-		i.start()
+	thread3.start()
 	#listen to zeroconf to check if mqtt server change
 
 	# just for debug
@@ -555,26 +477,16 @@ if __name__=='__main__':
 
 	global lastDiscoveryTime
 	global s
-
-	print "\033[0;32;40mbefore socket\033[0m"
-
-  dataddd = get_empty_datadict()
 	s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         try:
-            s.connect((depHost,depPort))
+            s.connect((socketHost,socketPort))
             s.setblocking(0)
         except socket.error as msg:
-	    print "socket error:%s" % (msg,)
-            #print(msg)
-	print "\033[0;32;40mafter socket\033[0m"
+            print(msg)
         reconnect_count = 0
 
 	lastDiscoveryTime=0
-	try:
-		callscanner = Scanner().withDelegate(ScanDelegate())
-	except Exception,e:
-		print "\033[0;32;40m main:BLEscanner init:%s,%s\033[0m"  % (Exception,e)
-	print "\033[0;32;40mafter callscanner\033[0m"
+	callscanner = Scanner().withDelegate(ScanDelegate())
 	count =0
 	
 	while True:
@@ -586,7 +498,5 @@ if __name__=='__main__':
 		#	print "send common: %s " % (json.dumps(result),)
 		#	client.publish(COMMONTITLE,json.dumps(result))
 		#	lastDiscoveryTime = now
-            except Exception,e:
-		#print e
-		print "\033[0;32;40m main:callscanner:scan %s,%s\033[0m"  % (Exception,e)
+            except:
                 time.sleep(5)

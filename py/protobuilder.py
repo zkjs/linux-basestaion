@@ -12,9 +12,9 @@ def outputbuilder(bccommand,bsmac,bcmac,battery,bsip,rssi):
     #bsip=basestation socket/ip
     #temp no input
     #battery until next bc version
-    #bccommand = key, 13, 66, 68 etc;
+    #bccommand = key, 13, 66, 68 etc; 01 hb, 02 alarm, 03 binding, 04 lost
     #bccommand = value, 2004, 2001, 2002, etc
-    cmdict = {'13': 2004, '66': 2001, '68':2002, '70':2003}
+    cmdict = {'01': 2004, '02': 2001, '04':2002, '03':2003}
     cm = cmdict.get(bccommand, False)
     if cm:
         data['Command'] = cm

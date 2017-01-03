@@ -1,0 +1,41 @@
+[station]
+alias = 1001
+
+[queue]
+position_l= 10000
+cmd_l= 100
+call_l = 100
+
+[MQTT]
+server = 192.168.43.150
+port = 1883
+position_t = position
+cmd_t = cmd
+common_t = common
+call_t = nursecall
+
+[SOCKET]
+host = 192.168.2.9
+port = 8080 
+
+
+[BLE]
+bracetlet_flag= 00ff
+bracelet2_flag= 200000
+bracelet3_flag= 140000
+position_manufacturer_flag= 13
+call_manufacturer_flag= 66
+outbody_manufacturer_flag= 68
+
+[DATA]
+MODE= SJ
+
+[time]
+thread_cmd_sleep_time = 10.0
+thread_mqtt_loop_sleeptime = 10.0
+thread_mqtt_loop_timeout = 1.0
+thread_mqtt_keepalive_time = 130
+thread_mqtt_sender_position_sleeptime = 5.0
+thread_mqtt_sender_call_sleeptime = 0
+thread_timer_control_blescan_flag_sleeptime = 10.0
+main_scanner_scantime = 1.0

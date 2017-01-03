@@ -1,6 +1,8 @@
 #! /usr/bin/python
 # -*- coding: utf-8 -*-
-import uuid
+#import uuid
+
+import uuid, fcntl, struct
 import random
 import socket,fcntl
 import hashlib,urllib,struct
@@ -59,7 +61,7 @@ def restart_raspi():
 def md5sum(fname):
     """ 计算文件的MD5值
     """
-    def read_chunks(fh):
+   def read_chunks(fh):
         fh.seek(0)
         chunk = fh.read(8096)
         while chunk:
