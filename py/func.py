@@ -4,7 +4,7 @@
 
 import uuid, fcntl, struct
 import random
-import socket,fcntl
+import socket,fcntl,psutil
 import hashlib,urllib,struct
 import os,sys,time,commands
 import tarfile
@@ -21,7 +21,8 @@ def get_ip_address(ifname):
         struct.pack('256s', ifname[:15])
     )[20:24])
     except Exception,e:
-	print Exception,e
+	#print Exception,e
+	print "\033[0;32;40m get_ip_address %s:%s %s\033[0m" % (ifname,Exception,e)
         res = '127.0.0.1'
     return res
 
@@ -61,7 +62,7 @@ def restart_raspi():
 def md5sum(fname):
     """ 计算文件的MD5值
     """
-   def read_chunks(fh):
+    def read_chunks(fh):
         fh.seek(0)
         chunk = fh.read(8096)
         while chunk:
@@ -94,6 +95,7 @@ def download(filename,md5_sum,ip,port,ran):
 		urllib.urlretrieve(url,filename)
 		print "\033[0;32;40m download suc\033[0m "
 	except Exception,e:
+		#print "\033[0;32;40m runcmd  \033[0m"
 		print "\033[0;32;40m download ERROR %s:%s\033[0m" % (Exception,e)
 		client.publish('ap','download error %s,%s' % (Exception,e))
 		return {'status':'Error','Info':"cannot download file %s:%s,%s" % (filename,Exception,e)}
@@ -114,13 +116,15 @@ def extract(tar_path, target_path):
             tar.extract(file_name, target_path)
         tar.close()
     except Exception, e:
+	print "\033[0;32;40m extract Exception:%s %s\033[0m" % (Exception,e)
         raise Exception, e
 
 def deploy(filename):
 	try:
 		extract(filename,cur_file_dir())		
 	except Exception,e:
-		pass
+		print "\033[0;32;40m deploy Exception:%s %s\033[0m" % (Exception,e)
+		#pass
 	return {'status':'OK'}
 
 def parseArgs2Dict(cmd_line):
@@ -186,6 +190,7 @@ def has_camera():
         try:
                 c = picamera.PiCamera()
         except Exception,e:
+		print "\033[0;32;40m has_camera Exception:%s %s\033[0m" % (Exception,e)
                 return False
         else:
 		c.close()
@@ -263,7 +268,8 @@ def get_system_info():
         DiskInfo['DiskTotal'] = "%s%s" % (str(DISK_total),'B')
         DiskInfo['DiskUsed'] = "%s%s" % (str(DISK_used),'B')
         DiskInfo['DiskUsedPerc'] =  str(DISK_perc)
-        heartbeatInfo['os_uptime'] = "%s min" % (str(osUptime()),)
+        #heartbeatInfo['os_uptime'] = "%s min" % (str(osUptime()),)
+        heartbeatInfo['os_uptime'] = "%s min" % (str(psutil.cpu_percent(interval=1)),)
 
         #print json.dumps(heartbeatInfo,indent=4)
         return heartbeatInfo

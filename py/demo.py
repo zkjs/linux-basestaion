@@ -29,6 +29,7 @@ from logging.handlers import RotatingFileHandler
 
 global stationAlias
 global reconnect_count
+global reconnect_count_mqtt
 global lastDiscoveryTime
 global stationMac 
 global cameraReviewed 
@@ -39,7 +40,7 @@ dataddd={}
 cameraReviewed = False
 threads=[]
 threadID=1
-stationMac = get_mac_address()
+stationMac = get_mac_address(':')
 positionQ= Queue.Queue(PositionQueueLength)
 commandQ = Queue.Queue(CommandQueueLength)
 callQ = Queue.Queue(CallQueueLength)
@@ -94,13 +95,28 @@ def reconnect():
         try:
             s.close()
         except socket.error as msg:
-            print"reconnect error : %s " % (msg,)
+            print"socket reconnect:close error : %s " % (msg,)
         try:
             s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
             s.connect((depHost,depPort))
         except socket.error as msg:
             #print(msg)
-            print"reconnect error : %s " % (msg,)
+            print"socket reconnect error : %s " % (msg,)
+def reconnect_mqtt():
+	global reconnect_count_mqtt
+	#global client
+	global MQTTServer,MQTTPort,mqttClientKeepAliveTime
+	reconnect_count_mqtt += 1
+	if reconnect_count_mqtt >=3:
+		reconnect_count_mqtt = 0
+		try:
+			client.disconnect()
+		except Exception,e:
+			print "mqtt reconnect:disconnect error :%s,%s " % (Exception,e)
+		try:
+			client.connect(MQTTServer,MQTTPort,mqttClientKeepAliveTime)
+		except Exception,e:
+			print "mqtt reconnect error :%s,%s " % (Exception,e)
 
 class ScanDelegate(DefaultDelegate):
         def __init__(self):
@@ -212,17 +228,28 @@ class ScanDelegate(DefaultDelegate):
 			callData=data
 			callData['nursecall'] = True
 			print "\033[1;31;40m%s\033[0m" % (json.dumps(callData,))
-			client.publish(CALLTITLE,json.dumps(callData))
+			try:
+				client.publish(CALLTITLE,json.dumps(callData))
+			except Exception,e:
+				print "\033[1;31;40mMqtt Exception:%s\033[0m" % (Exception,e)
+				reconnect_mqtt()
 			lastDiscoveryTime = time.time()
 			return 0	
 		elif data['Manufacturer'].startswith(outbodyFlag,6):
 			outbodyData = data
 			#client.publish(COMMONTITLE,json.dumps(outbodyData))
-			client.publish(POSITIONTITLE,json.dumps(outbodyData))
+			try:
+				client.publish(OUTBODYTITLE,json.dumps(outbodyData))
+			
+			except Exception,e:
+				print "\033[1;31;40mMqtt Exception:%s\033[0m" % (Exception,e)
+				reconnect_mqtt()
 			lastDiscoveryTime = time.time()
 			return 0
-		positionQ.put(json.dumps(data))
-		print json.dumps(data)
+		#change to send to mqtt immidiately
+		#positionQ.put(json.dumps(data))
+		client.publish(POSITIONTITLE,json.dumps(data))
+		print "%s,%s:%s" % (MQTTServer,MQTTPort,json.dumps(data))
 		lastDiscoveryTime = time.time()
 
 def on_connect(client,userdata,flags,rc):
@@ -230,10 +257,11 @@ def on_connect(client,userdata,flags,rc):
 	print("Connected with resut code " + str(rc))
 
 def on_disconnect(client, userdata, rc):      
-	while rc != 0:
-	 	sleep(2)
-		print "Reconnecting..."
-		rc = client.reconnect()
+	print "Disconnected..."
+	#while rc != 0:
+	# 	sleep(2)
+	#	print "Reconnecting..."
+	#	rc = client.reconnect()
 
 def on_message(client,userdata,msg):
 	print "\033[1;31;40m[get] topic %s , payload:%s\033[0m" % (msg.topic, str(msg.payload))
@@ -251,13 +279,22 @@ class MyListener(object):
     def add_service(self, zeroconf, type, name):
 	global MQTTServer,MQTTPort,client
         info = zeroconf.get_service_info(type, name)
+	#log sth
         #print("Service %s added, service info: %s" % (name, info))
 	if info.server 	!= MQTTServer or info.port != MQTTPort:
 		print "\033[1;31;40m change to new mqtt server : %s:%s\033[0m" % (info.server,info.port)
 		MQTTServer = info.server
 		MQTTPort = info.port
-		client.disconnect()
-		client.connect(MQTTServer,MQTTPort,mqttClientKeepAliveTime)
+		try:
+			write_conf('MQTT','server',MQTTServer)
+			write_conf('MQTT','port',MQTTPort)
+		except Exception,e:
+			#log sth
+			print "\033[1;31;40m failed to write back new mqtt server : %s:%s\033[0m" % (Exception,e)
+			
+		#client.disconnect()
+		#client.connect(MQTTServer,MQTTPort,mqttClientKeepAliveTime)
+		reconnect_mqtt()
 		#write back to conf file
 		#write_conf('MQTT','server',MQTTServer)
 		#write_conf('MQTT','port',MQTTPort)
@@ -290,7 +327,11 @@ def senddata(threadName,title,q,sleeptime):
 		while not q.empty():
 			data = q.get()
 			#print "\033[0;32;40m send data\033[0m"	
-			client.publish(title,data)
+			try:
+				client.publish(title,data)
+			except Exception,e:
+				print "\033[1;31;40mMqtt Exception:%s\033[0m" % (Exception,e)
+				reconnect_mqtt()
 			print "sended %s " % (data,)
 		if sleeptime > 0:
 			time.sleep(sleeptime)
@@ -326,7 +367,7 @@ def runcmd(threadName,q):
 						#should log sth
 						print "033[0;32;40m current version : %f, order version :%f\033[0m " % (version,ArgsDict['v'])
 				except Exception,e:
-					print "\033[0;32;40m get %s:%s\033[0m"  % (Exception,e)
+					print "\033[0;32;40m runcmd get %s:%s\033[0m"  % (Exception,e)
 			else :
 				try:
 					cmd = json.loads(data)
@@ -378,15 +419,15 @@ def runcmd2(data):
 				#should log sth
 				print "033[0;32;40m current version : %f, order version :%f\033[0m " % (version,float(ArgsDict['v']))
 		except Exception,e:
-			print "\033[0;32;40m get %s:%s\033[0m"  % (Exception,e)
+			print "\033[0;32;40m runcmd2 judging params get %s:%s\033[0m"  % (Exception,e)
 	else :
 		try:
 			cmd = json.loads(data)
 		except Exception,e:
-			print "\033[0;32;40m cannot conver cmd %s to json\033[0m" % (data,)
+			print "\033[0;32;40m runcmd2 cannot conver cmd %s to json\033[0m" % (data,)
 
 		if cmd['cmd'] == 'capture' :
-			print "\033[0;32;40m capture cmd2 received\033[0m"
+			print "\033[0;32;40m runcmd2 capture cmd2 received\033[0m"
 			#get photo
 			if cmd['ap'] == stationAlias :
 				print "\033[0;32;40m capture cmd2 received and going to capture\033[0m"
@@ -486,7 +527,12 @@ class MqttClient(threading.Thread):
 		global MQTTPort
 		client.on_connect = on_connect
 		client.on_message = on_message
-		client.connect(self.server,self.port,self.alivetime)
+		try:
+			client.connect(self.server,self.port,self.alivetime)
+		except Exception,e:
+			#log sth
+			print "\033[1;31;40mmqtt connect error (%s,%s) %s:%s\033[0m try reconnect" % (MQTTServer,MQTTPort,Exception,e)
+			reconnect_mqtt()
 		#client.loop_forever(timeout=self.timeout)
 		while True:
 			#if MQTTServer != self.server or MQTTPort != self.port:
@@ -494,7 +540,12 @@ class MqttClient(threading.Thread):
 			#	self.server = MQTTServer
 			#	self.port = MQTTPort
 			#	client.connect(self.server,self.port,self.alivetime)
-			client.loop(timeout=self.timeout)
+			try:
+				client.loop(timeout=self.timeout)
+			except Exception,e:
+				#log sth
+				print "\033[1;31;40mmqtt loop error (%s,%s) %s:%s\033[0m try reconnect" % (MQTTServer,MQTTPort,Exception,e)
+				reconnect_mqtt()
 			#time.sleep(self.sleeptime)
 
 		
@@ -509,24 +560,32 @@ class heartBeat(threading.Thread):
 		global version
 		global starttime
 		global hasCamera
-		heartbeat = get_system_info()
-		heartbeat['version'] = version
-		heartbeat['bsid'] = stationAlias
 		if has_camera():
-			if not heartbeat.has_key('features'):
-				heartbeat['features'] = []
-			heartbeat['features'].append('camera')
 			hasCamera = True
 		else:
 			hasCamera =False
 		while True:
 			nowtime = time.time()
+			heartbeat = get_system_info()
+			heartbeat['version'] = version
+			heartbeat['bsid'] = stationAlias
 			heartbeat['script_uptime'] = "%s mins" % (str(round((nowtime-starttime)/60.0,1)),)
-			client.publish(HEARTBEATTITLE,json.dumps(heartbeat))
+			if not heartbeat.has_key('features'):
+				heartbeat['features'] = []
+			if hasCamera:
+				heartbeat['features'].append('camera')
+			try:
+				client.publish(HEARTBEATTITLE,json.dumps(heartbeat))
+			except Exception,e:
+				print "\033[1;31;40mMqtt Exception:%s\033[0m" % (Exception,e)
+				reconnect_mqtt()
 			time.sleep(heartbeatSleeptime)
 if __name__=='__main__':
 	global starttime
 	global hasCamera
+	global reconnect_count_mqtt 
+	reconnect_count_mqtt =0 
+	#global mqttClientKeepAliveTime
 	print "\033[0;32;40m %d\033[0m" % (os.geteuid(),)
 	starttime=time.time()
 	#Watcher()
@@ -537,9 +596,9 @@ if __name__=='__main__':
 	#thread1.join()
 	#thread2 = MqttListener(2,'command',commandQ)
 	#thread2.start()
-	thread3 = MqttSender(3,'thread3',POSITIONTITLE,positionQ,positionSenderSleeptime)
+	#thread3 = MqttSender(3,'thread3',POSITIONTITLE,positionQ,positionSenderSleeptime)
 	#thread3.start()
-	threads.append(thread3)
+	#threads.append(thread3)
 	thread4 = heartBeat(4,'thread4',heartbeatSleeptime)
 	#thread4.start()
 	threads.append(thread4)
@@ -558,7 +617,7 @@ if __name__=='__main__':
 
 	print "\033[0;32;40mbefore socket\033[0m"
 
-  dataddd = get_empty_datadict()
+	dataddd = get_empty_datadict()
 	s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         try:
             s.connect((depHost,depPort))
@@ -588,5 +647,5 @@ if __name__=='__main__':
 		#	lastDiscoveryTime = now
             except Exception,e:
 		#print e
-		print "\033[0;32;40m main:callscanner:scan %s,%s\033[0m"  % (Exception,e)
+		print "\033[0;32;40m main:callscanner:scan %s,%s\033[0m and going to sleep 5s and scan again"  % (Exception,e)
                 time.sleep(5)
