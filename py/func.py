@@ -176,6 +176,18 @@ def send_photo(filename,filedir,ip,port,bsid,bcid,now):
 	if res.status_code == 200 :
 		os.remove('%s/%s/%s' % (cur_file_dir(),filedir,filename))
 		return True
+def send_photo_url(filename,filedir,url,now):
+	pic = open('%s/%s/%s' % (cur_file_dir(),filedir,filename))
+	url_path ="%s%s" % (url,now)
+	print "\033[1;31;40mURL:%s\033[0m" % (url_path,)
+	res = requests.post(url = url_path,
+                    data=pic,
+		    headers={'Content-Type': 'image/jpeg'})
+	print "\033[1;31;40m%s \033[0m " % (res,)
+	print "\033[1;31;40m%s \033[0m " % (res.status_code,)
+	if res.status_code == 200 :
+		os.remove('%s/%s/%s' % (cur_file_dir(),filedir,filename))
+		return True
 def get_cpu_temp():
 	tempFile = open( "/sys/class/thermal/thermal_zone0/temp" )
 	cpu_temp = tempFile.read()

@@ -8,7 +8,7 @@ cmd_l = 100
 call_l = 100
 
 [MQTT]
-server = daifengyideiMac.local.
+server = 10-8-47-94.local.
 port = 1883
 position_t = position
 cmd_t = ap
