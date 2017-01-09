@@ -39,6 +39,14 @@ def get_empty_datadict():
     print('datadict built %s' % datadict )
     return datadict
 
+def getMAC(interface):
+    try:
+        str = open('/sys/class/net/' + interface + '/address').read()
+    except:
+        str = '00:00:00:00:00:00'
+    dd = ''.join(str.split(':'))
+    return dd[0:12]
+
 def get_mac_address_full():
     mac=uuid.UUID(int = uuid.getnode()).hex[-12:]
     return ':'.join([mac[e:e+2] for e in range(0,11,2)])

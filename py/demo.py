@@ -137,7 +137,7 @@ class ScanDelegate(DefaultDelegate):
                     #dataddd['hexip'] = ''.join([hex(int(i)).lstrip('0x').rjust(2,'0') for i in local_ip.split('.')])
                     dataddd['bcaddr'] = dev.addr
                     dataddd['bcmac'] = dev.addr.replace(':','')
-                    dataddd['rssi'] = hex(dev.rssi*(-1)).lstrip('0x').rjust(2,'0')
+                    dataddd['rssi'] = hex(100+dev.rssi).lstrip('0x').rjust(2,'0')
                     dataddd['srssi'] = dev.rssi*(-1)
                     ## data type 
                     if depProt == 'B':
