@@ -11,6 +11,7 @@ from func import cur_file_dir
 conf = ConfigParser.ConfigParser()
 conf.read('%s/%s'% (cur_file_dir(),'t.cnf'))
 version = round(float(conf.get('station','version')),1)
+MacFilter = conf.get('station','mac_filter')
 
 POSITIONTITLE = conf.get("MQTT","position_t")
 CMDTITLE = conf.get("MQTT","cmd_t")
@@ -56,16 +57,16 @@ picUploadServer = conf.get('camera','upload_host')
 picUploadPort = conf.get('camera','upload_port')
 picUploadDir = conf.get('camera','tmp_dir')
 hottime = float(conf.get('camera','hottime'))
-def write_conf(node,key,value):
-	try:
-		fh = open('t.cnf','w')
-		conf.set(node,key,value)
-		conf.write(fh)
-	except:
-		#log sth
-		return False
-	else:
-		return True
-	finally:
-		fh.close()
+#def write_conf(node,key,value):
+#	try:
+#		fh = open('t.cnf','w')
+#		conf.set(node,key,value)
+#		conf.write(fh)
+#	except:
+#		#log sth
+#		return False
+#	else:
+#		return True
+#	finally:
+#		fh.close()
 		

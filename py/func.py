@@ -10,6 +10,22 @@ import os,sys,time,commands
 import tarfile
 import picamera
 import requests
+import logging
+#from var import MacFilter
+
+#console_func = logging.StreamHandle()
+#console_func.setLevel(logging.DEBUG)
+#formatter_func = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s'
+#console.setFormatter(formatter_func)
+#logging.getLogger('demo.func').addHandler(console_func)
+#
+#Rthandler = RotatingFileHandle('myapp.log',maxBytes=10*1024*1024,backupCount=5)
+#Rthandler.setLevel(logging.INFO)
+#formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
+#Rthandler.setFormatter(formatter)
+#logging.getLogger('').addHandler(Rthandler)
+logger_func = logging.getLogger('demo.func')
+	
 
 def get_ip_address(ifname):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -27,13 +43,26 @@ def get_ip_address(ifname):
     return res
 
 
-def get_mac_address(*args): 
-    mac=uuid.UUID(int = uuid.getnode()).hex[-12:] 
+#def get_mac_address(*args): 
+#    mac=uuid.UUID(int = uuid.getnode()).hex[-12:] 
+#    if len(args)>0:
+#	deli = args[0]
+#    else:
+#	deli = ''
+#    return deli.join([mac[e:e+2] for e in range(0,11,2)])
+
+def get_mac_address(st,*args):
+    a = os.popen('ifconfig | awk "/^' + st + '/{print \$5}"')
+    b = a.readline().rstrip()
     if len(args)>0:
 	deli = args[0]
-    else:
-	deli = ''
-    return deli.join([mac[e:e+2] for e in range(0,11,2)])
+	return b.replace(':',deli)
+    return b.replace(':','')
+
+def get_ifname(st):
+    a = os.popen('ifconfig | awk "/^' + st + '/{print \$1}"')
+    return a.readline().rstrip()
+    
 
 def checksum(b):
     sum = 0
@@ -255,8 +284,9 @@ def get_system_info():
 
         #stationID,scriptversion,mqtt listening
 
-        heartbeatInfo['ip'] = get_ip_address('wlan0')
-        heartbeatInfo['mac'] = get_mac_address(':')
+        #heartbeatInfo['ip'] = get_ip_address('wlan0')
+        #heartbeatInfo['mac'] = get_mac_address(':')
+	#heartbeatInfo['mac'] = get_mac_address(MacFilter,':')
         temp = {}
         heartbeatInfo['temp'] = temp
         temp['cpu'] = str(get_cpu_temp())
@@ -285,3 +315,18 @@ def get_system_info():
 
         #print json.dumps(heartbeatInfo,indent=4)
         return heartbeatInfo
+
+
+def write_conf(node,key,value):
+	try:
+		fh = open('t.cnf','w')
+		conf.set(node,key,value)
+		conf.write(fh)
+	except:
+		#log sth
+		return False
+	else:
+		return True
+	finally:
+		fh.close()
+		
