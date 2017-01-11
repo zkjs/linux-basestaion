@@ -23,13 +23,13 @@ def get_empty_datadict():
     #datadict={keyflag, bsmac, hexip, bcmac, rssi, battery, temp, reserve}
     datadict={}
     datadict['keyflag'] = KEY_HEARTBEAT
-    #datadict['bsmac'] = get_mac_address()
+    #datadict['bsmac'] = get_mac_address()#here introduce new mac method, fix issue#15
     datadict['bsmac'] = get_mac_address(MacFilter)
     #ipname = '%s%s' % (depIfip, get_mac_address())
     ipname = '%s%s' % (depIfip, get_mac_address(MacFilter))
-    datadict['ip'] = get_ip_address(ipname)
-    
+    #this part use exactly ifname to get ip, exception returns 127.0.0.1
     local_ip = get_ip_address(ipname)
+    datadict['ip'] = local_ip #get_ip_address(ipname)
     datadict['hexip'] = ''.join([hex(int(i)).lstrip('0x').rjust(2,'0') for i in local_ip.split('.')])
     datadict['bcmac'] = '010000000000'  #null bc mac;
     datadict['rssi'] = '63' #-99 predefined
