@@ -37,9 +37,10 @@ def get_ip_address(ifname):
         struct.pack('256s', ifname[:15])
     )[20:24])
     except Exception,e:
-	#print Exception,e
-	print "\033[0;32;40m get_ip_address %s:%s %s\033[0m" % (ifname,Exception,e)
-        res = '127.0.0.1'
+		#print Exception,e
+		#print "\033[0;32;40m get_ip_address %s:%s %s\033[0m" % (ifname,Exception,e)
+		logger_func.warning("[get_ip_address]\033[1;33;40mget_ip_address(%s):%s,%s\033[0m" % (ifname,Exception,e))
+		res = '127.0.0.1'
     return res
 
 
@@ -55,13 +56,13 @@ def get_mac_address(st,*args):
     a = os.popen('ifconfig | awk "/^' + st + '/{print \$5}"')
     b = a.readline().rstrip()
     if len(args)>0:
-	deli = args[0]
-	return b.replace(':',deli)
+		deli = args[0]
+		return b.replace(':',deli)
     return b.replace(':','')
 
 def get_ifname(st):
-    a = os.popen('ifconfig | awk "/^' + st + '/{print \$1}"')
-    return a.readline().rstrip()
+	a = os.popen('ifconfig | awk "/^' + st + '/{print \$1}"')
+	return a.readline().rstrip()
     
 
 def checksum(b):
@@ -79,7 +80,9 @@ def checksum(b):
 def restart_program():  
     """Restarts the current program. 
     Note: this function does not return. Any cleanup action (like 
-    saving data) must be done before calling this function."""  
+    saving data) must be done before calling this function.
+	get some problem with multi-threads and not used.
+	"""  
     python = sys.executable  
     os.execl(python, python, * sys.argv)  
     #os.execl("/usr/bin/sudo",  python, * sys.argv)  
@@ -116,27 +119,33 @@ def md5sum(fname):
 
 def download(filename,md5_sum,ip,port,ran):
 	waittime = random.randrange(0,ran)
-	print "\033[0;32;40m sleep %ss\033[0m" % (waittime,)
+	#print "\033[0;32;40m sleep %ss\033[0m" % (waittime,)
+	logger_func.debug("[download]going to sleep\033[1;32;40m%s\033[0m" % (waittime,))
 	time.sleep(waittime)
-	print "\033[0;32;40m sleep %ss done\033[0m" % (waittime,)
+	#print "\033[0;32;40m sleep %ss done\033[0m" % (waittime,)
 	try:
 		url = 'http://%s:%s/%s' % (ip,port,filename)
 		urllib.urlretrieve(url,filename)
-		print "\033[0;32;40m download suc\033[0m "
+		#print "\033[0;32;40m download suc\033[0m "
 	except Exception,e:
 		#print "\033[0;32;40m runcmd  \033[0m"
-		print "\033[0;32;40m download ERROR %s:%s\033[0m" % (Exception,e)
-		client.publish('ap','download error %s,%s' % (Exception,e))
+		#print "\033[0;32;40m download ERROR %s:%s\033[0m" % (Exception,e)
+		#TODO:return sth to server
+		#client.publish('ap','download error %s,%s' % (Exception,e))
+		logger_func.warning("[download]\033[1;33;40mCannot download file %s:%s,%s\033[0m" % (filename,Exception,e))
 		return {'status':'Error','Info':"cannot download file %s:%s,%s" % (filename,Exception,e)}
-		
+	else:
+		logger_func.info("[download]Download succ")		
 	md5OfFile = md5sum(filename)
 	if md5OfFile == md5_sum:
-		print "\033[0;32;40m download md5 check ok\033[0m "
+		#print "\033[0;32;40m download md5 check ok\033[0m "
+		logger_func.info("[download]md5 check ok")
 		return {'status':'OK'}
 	else:
-		print "\033[0;32;40m download md5 check failure receive:%s file:%s\033[0m "% (md5_sum,md5OfFile)
+		#print "\033[0;32;40m download md5 check failure receive:%s file:%s\033[0m "% (md5_sum,md5OfFile)
+		logger_func.warning("[download]\033[1;33;40mmd5 wrong, received:%s, received file:%s \033[0m" % (md5_sum,md5OfFile))
 		return {'status':'Error','Info': 'md5 of file:%s , md5 providd:%s, doesn\'t match.' % (md5OfFile,md5_sum)}
-		
+
 def extract(tar_path, target_path):
     try:
         tar = tarfile.open(tar_path, "r")
@@ -145,23 +154,28 @@ def extract(tar_path, target_path):
             tar.extract(file_name, target_path)
         tar.close()
     except Exception, e:
-	print "\033[0;32;40m extract Exception:%s %s\033[0m" % (Exception,e)
-        raise Exception, e
+		#print "\033[0;32;40m extract Exception:%s %s\033[0m" % (Exception,e)
+		logger_func.warning("[extract]\033[1;33;40mExtract %s:%s,%s\033[0m" % (file_name,Exception,e))
+        #raise Exception, e
 
 def deploy(filename):
 	try:
 		extract(filename,cur_file_dir())		
 	except Exception,e:
-		print "\033[0;32;40m deploy Exception:%s %s\033[0m" % (Exception,e)
-		#pass
-	return {'status':'OK'}
+		#print "\033[0;32;40m deploy Exception:%s %s\033[0m" % (Exception,e)
+		logger_func.warning("[deploy]\033[1;33;40mDeploy %s:%s,%s\033[0m" % (filename,Exception,e))
+		return {'status':'ERROR'}
+	else:
+		return {'status':'OK'}
 
 def parseArgs2Dict(cmd_line):
 	args_array = cmd_line.split()
 	args_hash = {}
-	for i in args_array:
+	for i in args_array: 
 		if i.startswith('-'):
 			args_hash[i[1]] = i[2:]
+		else:
+			logger_func.warning("[parseArgs2Dict]\033[1;33;40msome para not start with '-':%s\033[0m" % (cmd_line,))
 	return args_hash
 
 def cur_file_dir():
@@ -176,9 +190,8 @@ def take_photo(filename,filedir,picResolutionV,picResolutionH,cameraReviewed,hot
 		camera = picamera.PiCamera()
 	#print pic
 	except Exception,e:
-		#log sth
-		#camera.close()
-		print "\033[0;32;40mError from take_photo: %s, %s \033[0m" % (Exception,e)
+		#print "\033[0;32;40mError from take_photo: %s, %s \033[0m" % (Exception,e)
+		logger_func.error("[take_photo]\033[0;31;40mCannot Init Picamera:%s,%s\033[0m" % (Exception,e))
 		return False
 	else:
 		camera.resolution = (picResolutionH,picResolutionV)
@@ -191,35 +204,44 @@ def take_photo(filename,filedir,picResolutionV,picResolutionH,cameraReviewed,hot
 		else:
 			camera.capture('%s/%s/%s' % (cur_file_dir(),filedir,filename,))
 		camera.close()
+		logger_func.info("[take_photo]Capture succ")
 		return True
 
 def send_photo(filename,filedir,ip,port,bsid,bcid,now):
 	pic = open('%s/%s/%s' % (cur_file_dir(),filedir,filename))
 	url_path = 'http://%s:%s/photo/%s?bracelets=%s&time=%s' % (ip,port,bsid,bcid,now)
-	print "\033[1;31;40mURL:%s\033[0m" % (url_path,)
+	#print "\033[1;31;40mURL:%s\033[0m" % (url_path,)
+	logger_func.debug("[send_photo]URL:\033[1;32;40m%s\033[0m" % (url_path,))
 	res = requests.post(url = url_path,
                     data=pic,
 		    headers={'Content-Type': 'image/jpeg'})
-	print "\033[1;31;40m%s \033[0m " % (res,)
-	print "\033[1;31;40m%s \033[0m " % (res.status_code,)
+	#print "\033[1;31;40m%s \033[0m " % (res,)
+	#print "\033[1;31;40m%s \033[0m " % (res.status_code,)
 	if res.status_code == 200 :
 		os.remove('%s/%s/%s' % (cur_file_dir(),filedir,filename))
+		logger_func.info("[send_photo]Send photo succ,status_code:%s" % (res.status_code,))
+		logger_func.debug("[send_photo]send photo suc, res:%s" % (res,))
 		return True
 	else:
+		logger_func.error("[send_photo]\033[1;31;40mFailed to send photo %s:%s\033[0m" % (filename,res))
 		return False
 def send_photo_url(filename,filedir,url,now):
 	pic = open('%s/%s/%s' % (cur_file_dir(),filedir,filename))
 	url_path ="%s%s" % (url,now)
-	print "\033[1;31;40mURL:%s\033[0m" % (url_path,)
+	#print "\033[1;31;40mURL:%s\033[0m" % (url_path,)
+	logger_func.debug("[send_photo_url]URL received:\033[1;32;40murl_path\033[0m" % (url_path,))
 	res = requests.post(url = url_path,
                     data=pic,
 		    headers={'Content-Type': 'image/jpeg'})
-	print "\033[1;31;40m%s \033[0m " % (res,)
-	print "\033[1;31;40m%s \033[0m " % (res.status_code,)
+	#print "\033[1;31;40m%s \033[0m " % (res,)
+	#print "\033[1;31;40m%s \033[0m " % (res.status_code,)
 	if res.status_code == 200 :
 		os.remove('%s/%s/%s' % (cur_file_dir(),filedir,filename))
+		logger_func.info("[send_photo_url]Send photo succ,status_code:%s" % (res.status_code,))
+		logger_func.debug("[send_photo_url]send photo suc, res:%s" % (res,))
 		return True
 	else:
+		logger_func.error("[send_photo_url]\033[1;31;40mFailed to send photo %s:%s\033[0m" % (filename,res))
 		return False
 def get_cpu_temp():
 	tempFile = open( "/sys/class/thermal/thermal_zone0/temp" )
@@ -232,14 +254,16 @@ def get_gpu_temp():
 	return  round(float(gpu_temp),1)
 
 def has_camera():
-        try:
-                c = picamera.PiCamera()
-        except Exception,e:
-		print "\033[0;32;40m has_camera Exception:%s %s\033[0m" % (Exception,e)
-                return False
-        else:
+	try:
+		c = picamera.PiCamera()
+	except Exception,e:
+		#print "\033[0;32;40m has_camera Exception:%s %s\033[0m" % (Exception,e)
+		logger_func.debug("[has_camera]I didn't have a camera o~")
+		return False
+	else:
 		c.close()
-                return True
+		logger_func.debug("[has_camera]I have a camera yeah~")
+		return True
 
 def getRAMinfo():
 	p = os.popen('free')
@@ -252,6 +276,7 @@ def getRAMinfo():
 			b = line.split()[1:6]
 			b.append(v.readline())
 			return b
+
 def getCPUuse():
 	return(str(os.popen("top -n1 | awk '/Cpu\(s\):/ {print $2}'").readline().strip()))
 
@@ -271,53 +296,53 @@ def osUptime():
 	return round(float(sec)/60.0,1)
 
 def get_system_info():
-        heartbeatInfo = {}
-        CPU_usage = getCPUuse()
+	heartbeatInfo = {}
+	CPU_usage = getCPUuse()
 
-        RAM_stats = getRAMinfo()
-        RAM_total = round(int(RAM_stats[0]) / 1000,1)
-        RAM_used = round(int(RAM_stats[1]) / 1000 + int(RAM_stats[4])/1000,1)
-        RAM_free = round(int(RAM_stats[2]) / 1000,1)
-        RAM_bufcch = round(int(RAM_stats[4])/ 1000,1)
-        free_version = RAM_stats[5]
-        # Disk information
-        DISK_stats = getDiskSpace()
-        DISK_total = DISK_stats[0]
-        DISK_used = DISK_stats[1]
-        DISK_perc = DISK_stats[3]
+	RAM_stats = getRAMinfo()
+	RAM_total = round(int(RAM_stats[0]) / 1000,1)
+	RAM_used = round(int(RAM_stats[1]) / 1000 + int(RAM_stats[4])/1000,1)
+	RAM_free = round(int(RAM_stats[2]) / 1000,1)
+	RAM_bufcch = round(int(RAM_stats[4])/ 1000,1)
+	free_version = RAM_stats[5]
+	# Disk information
+	DISK_stats = getDiskSpace()
+	DISK_total = DISK_stats[0]
+	DISK_used = DISK_stats[1]
+	DISK_perc = DISK_stats[3]
 
-        #stationID,scriptversion,mqtt listening
+	#stationID,scriptversion,mqtt listening
 
-        #heartbeatInfo['ip'] = get_ip_address('wlan0')
-        #heartbeatInfo['mac'] = get_mac_address(':')
+	#heartbeatInfo['ip'] = get_ip_address('wlan0')
+	#heartbeatInfo['mac'] = get_mac_address(':')
 	#heartbeatInfo['mac'] = get_mac_address(MacFilter,':')
-        temp = {}
-        heartbeatInfo['temp'] = temp
-        temp['cpu'] = str(get_cpu_temp())
-        temp['gpu'] = str(get_gpu_temp())
-        heartbeatInfo['timestamp'] = int(time.time())
+	temp = {}
+	heartbeatInfo['temp'] = temp
+	temp['cpu'] = str(get_cpu_temp())
+	temp['gpu'] = str(get_gpu_temp())
+	heartbeatInfo['timestamp'] = int(time.time())
 
-        heartbeatInfo['features'] = []
-        #if has_camera():
-        #        heartbeatInfo['features'].append('camera')
-        #heartbeatInfo['hasCamera'] = str(has_camera())
-        heartbeatInfo['cpu_load'] = "%s %s" % (CPU_usage,"%")
-        RamInfo = {}
-        heartbeatInfo['ram'] = RamInfo
-        RamInfo['total'] = "%s %s" % (str(RAM_total),'MB')
-        RamInfo['used'] = "%s %s" % (str(RAM_used),'MB')
-        RamInfo['free'] = "%s %s" % (str(RAM_free),'MB')
-        RamInfo['buffcache'] = "%s %s" % (str(RAM_bufcch),'MB')
-        RamInfo['used_perc'] = "%s %s" % (str(round(RAM_used/RAM_total*100,1)),'%')
-        DiskInfo = {}
-        heartbeatInfo['DiskInfo'] = DiskInfo
-        DiskInfo['DiskTotal'] = "%s%s" % (str(DISK_total),'B')
-        DiskInfo['DiskUsed'] = "%s%s" % (str(DISK_used),'B')
-        DiskInfo['DiskUsedPerc'] =  str(DISK_perc)
-        #heartbeatInfo['os_uptime'] = "%s min" % (str(osUptime()),)
-        heartbeatInfo['os_uptime'] = "%s min" % (str(psutil.cpu_percent(interval=1)),)
+	heartbeatInfo['features'] = []
+	#if has_camera():
+	#        heartbeatInfo['features'].append('camera')
+	#heartbeatInfo['hasCamera'] = str(has_camera())
+	heartbeatInfo['cpu_load'] = "%s %s" % (CPU_usage,"%")
+	RamInfo = {}
+	heartbeatInfo['ram'] = RamInfo
+	RamInfo['total'] = "%s %s" % (str(RAM_total),'MB')
+	RamInfo['used'] = "%s %s" % (str(RAM_used),'MB')
+	RamInfo['free'] = "%s %s" % (str(RAM_free),'MB')
+	RamInfo['buffcache'] = "%s %s" % (str(RAM_bufcch),'MB')
+	RamInfo['used_perc'] = "%s %s" % (str(round(RAM_used/RAM_total*100,1)),'%')
+	DiskInfo = {}
+	heartbeatInfo['DiskInfo'] = DiskInfo
+	DiskInfo['DiskTotal'] = "%s%s" % (str(DISK_total),'B')
+	DiskInfo['DiskUsed'] = "%s%s" % (str(DISK_used),'B')
+	DiskInfo['DiskUsedPerc'] =  str(DISK_perc)
+	#heartbeatInfo['os_uptime'] = "%s min" % (str(osUptime()),)
+	heartbeatInfo['os_uptime'] = "%s min" % (str(psutil.cpu_percent(interval=1)),)
 
-        #print json.dumps(heartbeatInfo,indent=4)
+	#print json.dumps(heartbeatInfo,indent=4)
         return heartbeatInfo
 
 
@@ -326,10 +351,12 @@ def write_conf(node,key,value):
 		fh = open('t.cnf','w')
 		conf.set(node,key,value)
 		conf.write(fh)
-	except:
+	except Exception,e:
 		#log sth
+		logger_func.error("[write_conf]\033[1;31;40mCannot write %s back as %s.%s for:%s,%s\033[0m" % (value,node,key,Exception,e))
 		return False
 	else:
+		logger_func.debug("[write_conf]Write back %s as %s.%s Succ" % (value,node,key))
 		return True
 	finally:
 		fh.close()

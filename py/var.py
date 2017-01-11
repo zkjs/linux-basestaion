@@ -56,6 +56,7 @@ picUploadServer = conf.get('camera','upload_host')
 picUploadPort = conf.get('camera','upload_port')
 picUploadDir = conf.get('camera','tmp_dir')
 hottime = float(conf.get('camera','hottime'))
+
 #def write_conf(node,key,value):
 #	try:
 #		fh = open('t.cnf','w')

@@ -17,21 +17,13 @@ import requests
 import picamera
 import json
 import re
-#from six.moves import input
-#from ftplib import FTP
 from func import *
 from var import *
-#import new dependencies
 from depdata import *
 from depconfig import *
 
 import logging
 from logging.handlers import TimedRotatingFileHandler
-#logging.basicConfig(level=logging.DEBUG,
-#	datefmt='%a, %d %b %Y %H:%M:%S',
-#	format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-#	filename='demo.log',
-#	filemode='w')
 
 console = logging.StreamHandler()
 console.setLevel(logging.DEBUG)
@@ -45,7 +37,8 @@ logger.addHandler(console)
 Trthandler = TimedRotatingFileHandler(filename='demo',when='D',interval=1,backupCount=7)
 Trthandler.suffix = "%Y-%m-%d"
 #Trthandler.extMatch = re.compile(r"^\d{4}-\d{2}-\d{2}.log$")
-Trthandler.extMatch = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+#Trthandler.extMatch = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+Trthandler.extMatch = r"^\d{4}-\d{2}-\d{2}$"
 
 Trthandler.setLevel(logging.INFO)
 Trthandler.setFormatter(log_formatter)
@@ -82,16 +75,15 @@ def reconnect():
         try:
             s.close()
         except socket.error as msg:
-            print"socket reconnect:close error : %s " % (msg,)
-            logger.debug("[reconnect]socket reconnect:close error : %s " % (msg,))
+            #print"socket reconnect:close error : %s " % (msg,)
+            logger.warning("[reconnect]\033[1;33;40msocket reconnect:close error : %s\033[0m " % (msg,))
 	    #logger.debug('
         try:
             s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
             s.connect((depHost,depPort))
         except socket.error as msg:
-            #print(msg)
-            print"socket reconnect error : %s " % (msg,)
-            logger.debug("[reconnect]socket reconnect:connect error : %s " % (msg,))
+            #print"socket reconnect error : %s " % (msg,)
+            logger.warning("[reconnect\033[1;33;40m]socket reconnect:connect error : %s \033[0m" % (msg,))
 
 def reconnect_mqtt():
 	global reconnect_count_mqtt
@@ -103,13 +95,13 @@ def reconnect_mqtt():
 		try:
 			client.disconnect()
 		except Exception,e:
-			print "mqtt reconnect:disconnect error :%s,%s " % (Exception,e)
-			logger.debug("[reconnect_mqtt]mqtt reconnect:close error : %s " % (msg,))
+			#print "mqtt reconnect:disconnect error :%s,%s " % (Exception,e)
+			logger.warning("[reconnect_mqtt]\033[1;33;40mmqtt reconnect:close error : %s\033[0m" % (msg,))
 		try:
 			client.connect(MQTTServer,MQTTPort,mqttClientKeepAliveTime)
 		except Exception,e:
-			print "mqtt reconnect error :%s,%s " % (Exception,e)
-			logger.debug("[reconnect_mqtt]mqtt reconnect:connect error : %s " % (msg,))
+			#print "mqtt reconnect error :%s,%s " % (Exception,e)
+			logger.warning("[reconnect_mqtt]\033[1;33;40mmqtt reconnect:connect error : %s \033[0m" % (msg,))
 			return False
 		else:
 			return True
@@ -139,13 +131,12 @@ class ScanDelegate(DefaultDelegate):
 			#    if alarm_update(dev.addr.replace(':',''), dataddd['keyflag']):
 			#        dataddd['keyflag'] = KEY_BINDING
 			#ip need update
-			except:
+			except Exception,e:
 				print('dev+1 %s' % dev.addr )
+				logger.warning("[ScanDelegate.handleDiscovery]\033[1;33;40mrawdata_translate %s get exception:%s,%s\033[0m" % (dev.addr,Exception,e))
 			if alarm_update(dev.addr.replace(':',''), dataddd['keyflag']):
 				dataddd['keyflag'] = KEY_BINDING
-			#local_ip = get_ip_address(depIfip)
-			#dataddd['ip'] = str(local_ip)
-			#dataddd['hexip'] = ''.join([hex(int(i)).lstrip('0x').rjust(2,'0') for i in local_ip.split('.')])
+			#local_ip = get_ip_address(depIfip) #dataddd['ip'] = str(local_ip) #dataddd['hexip'] = ''.join([hex(int(i)).lstrip('0x').rjust(2,'0') for i in local_ip.split('.')])
 			dataddd['bcaddr'] = dev.addr
 			dataddd['bcmac'] = dev.addr.replace(':','')
 			dataddd['rssi'] = hex(dev.rssi*(-1)).lstrip('0x').rjust(2,'0')
@@ -161,10 +152,13 @@ class ScanDelegate(DefaultDelegate):
 			#if depNet == 'S':
 			try:
 				s.send(load)
-				print('all xxx sent %s' % load)
+				#print('all xxx sent %s' % load)
 			except socket.error as msg:
-				print('socket error %s' % msg)
+				logger.warning("[ScanDelegate.handleDiscovery]\033[1;33;40msocket error:%s\033[0m" % (msg,))
+				#print('socket error %s' % msg)
 				reconnect()
+			else:
+				logger.info("[ScanDelegate.handleDiscovery]socket send %s " % (load,))
 			##Mqtt not processed
 
 			## below is old codes
@@ -189,69 +183,69 @@ class ScanDelegate(DefaultDelegate):
 		if data['Manufacturer'].startswith(callFlag,6):
 			callData=data
 			callData['nursecall'] = True
-			print "\033[1;31;40m%s\033[0m" % (json.dumps(callData,))
+			logger.info("[ScanDelegate.handleDiscovery]\033[1;31;40mCall data\033[0mget:%s" % (json.dumps(callData),))
+			#print "\033[1;31;40m%s\033[0m" % (json.dumps(callData,))
 			try:
 				client.publish(CALLTITLE,json.dumps(callData))
 			except Exception,e:
-				print "\033[1;31;40mMqtt Exception:%s\033[0m" % (Exception,e)
-				logger.warning("[ScanDelegate.handleDiscovery]\033[1;31;40mMqtt Exception:%s\033[0m" % (Exception,e))
+				#print "\033[1;31;40mMqtt Exception:%s\033[0m" % (Exception,e)
+				logger.warning("[ScanDelegate.handleDiscovery]\033[1;33;40msending call data %s get %s:%s\033[0m and trying to reconnect" % (json.dumps(callData),Exception,e))
 				reconnect_mqtt()
-			lastDiscoveryTime = time.time()
-			return 0	
+			else:
+				logger.info("[ScanDelegate.handleDiscovery]Call data sended %s,%s:%s" % (MQTTServer,MQTTPort,json.dumps(callData)))
+			#lastDiscoveryTime = time.time()
 		elif data['Manufacturer'].startswith(outbodyFlag,6):
+			logger.info("[ScanDelegate.handleDiscovery]\033[1;34;40mOutbody data\033[0mget:%s" % (json.dumps(callData),))
 			outbodyData = data
-			#client.publish(COMMONTITLE,json.dumps(outbodyData))
 			try:
 				client.publish(OUTBODYTITLE,json.dumps(outbodyData))
-			
 			except Exception,e:
-				print "\033[1;31;40mMqtt Exception:%s\033[0m" % (Exception,e)
-				logger.warning("[ScanDelegate.handleDiscovery]\033[1;31;40mMqtt Exception:%s\033[0m" % (Exception,e))
+				#print "\033[1;31;40mMqtt Exception:%s\033[0m" % (Exception,e)
+				logger.warning("[ScanDelegate.handleDiscovery]\033[1;33;40msending outbody data %s get %s:%s\033[0m and trying to reconnect" % (json.dumps(outbodyData),Exception,e))
 				reconnect_mqtt()
-			lastDiscoveryTime = time.time()
-			return 0
+			else:
+				logger.info("[ScanDelegate.handleDiscovery]Outbody data sended %s,%s:%s" % (MQTTServer,MQTTPort,json.dumps(outbodyData)))
+			#lastDiscoveryTime = time.time()
 		#change to send to mqtt immidiately
 		#positionQ.put(json.dumps(data))
-		try:
-			client.publish(POSITIONTITLE,json.dumps(data))
-		except Exception,e:
-				print "\033[1;31;40mMqtt Exception:%s\033[0m" % (Exception,e)
-				logger.warning("[ScanDelegate.handleDiscovery]\033[1;31;40mMqtt Exception:%s\033[0m" % (Exception,e))
-				reconnect_mqtt()
-		print "%s,%s:%s" % (MQTTServer,MQTTPort,json.dumps(data))
-		logger.info("[ScanDelegate.handleDiscovery]published.%s,%s:%s" % (MQTTServer,MQTTPort,json.dumps(data)))
-		lastDiscoveryTime = time.time()
+		else:
+			logger.info("[ScanDelegate.handleDiscovery]\033[1;34;40mPosition data\033[0mget:%s" % (json.dumps(callData),))
+			try:
+				client.publish(POSITIONTITLE,json.dumps(data))
+			except Exception,e:
+					#print "\033[1;31;40mMqtt Exception:%s\033[0m" % (Exception,e)
+					logger.warning("[ScanDelegate.handleDiscovery]\033[1;33;40mMqtt Exception:%s\033[0m" % (Exception,e))
+					reconnect_mqtt()
+			#print "%s,%s:%s" % (MQTTServer,MQTTPort,json.dumps(data))
+			else:
+				logger.info("[ScanDelegate.handleDiscovery]Position data sended %s,%s:%s" % (MQTTServer,MQTTPort,json.dumps(data)))
+			#lastDiscoveryTime = time.time()
 
 def on_connect(client,userdata,flags,rc):
 	client.subscribe(CMDTITLE)
-	print("Connected with resut code " + str(rc))
+	#print("Connected with resut code " + str(rc))
 	logger.info("[MqttClient.on_connect] Mqtt Connected with resut code " + str(rc))
 
 def on_disconnect(client, userdata, rc):      
-	print "Mqtt Disconnected..."
+	#print "Mqtt Disconnected..."
 	logger.info("[MqttClient.on_disconnect]Mqtt Disconnected...")
 
 def on_message(client,userdata,msg):
-	print "\033[1;31;40m[get] topic %s , payload:%s\033[0m" % (msg.topic, str(msg.payload))
-	logger.debug("[MqttClient.on_message]\033[1;31;40mget topic %s , payload:%s\033[0m" % (msg.topic, str(msg.payload)))
+	#print "\033[1;31;40m[get] topic %s , payload:%s\033[0m" % (msg.topic, str(msg.payload))
+	logger.debug("[MqttClient.on_message]get topic\033[1;32;40m%s\033[0m,payload:%s" % (msg.topic, str(msg.payload)))
 	if msg.topic == CMDTITLE:
-		print "\033[1;31;40m[get] %s \033[0m" % (str(msg.payload),)
-		logger.debug("[MqttClient.on_meesage]\033[1;31;40m runcmd2 going to deal with %s \033[0m" % (str(msg.payload),))
+		#print "\033[1;31;40m[get] %s \033[0m" % (str(msg.payload),)
+		logger.debug("[MqttClient.on_meesage]runcmd2 going to deal with %s" % (str(msg.payload),))
 		runcmd2(str(msg.payload))
 
 class MyListener(object):
-	#    def remove_service(self, zeroconf, type, name):
-	#	pass
-
 	def add_service(self, zeroconf, type, name):
 		global MQTTServer,MQTTPort,client
 		info = zeroconf.get_service_info(type, name)
-		#log sth
-		logger.info("[MyListerner.add_service]Service %s added, service info: %s" % (name, info))
+		logger.debug("[MyListerner.add_service]Service \033[1;32;40m%s\033[0m added, service info: \033[1;32;40m%s\033[0m" % (name, info))
 		if info.server 	!= MQTTServer or info.port != MQTTPort:
-			#log sth
-			print "\033[1;31;40m received new address from zeroconf so need to change to new mqtt server : %s:%s\033[0m" % (info.server,info.port)
-			logger.info("[MyListener.add_service]\033[1;31;40m received new address from zeroconf so need to change to new mqtt server : %s:%s\033[0m" % (info.server,info.port))
+			#print "\033[1;31;40m received new address from zeroconf so need to change to new mqtt server : %s:%s\033[0m" % (info.server,info.port)
+			logger.info("[MyListener.add_service]received new address from zeroconf so need to change to new mqtt server : %s:%s\033[0m" % (info.server,info.port))
 			MQTTServer = info.server
 			MQTTPort = info.port
 			res = reconnect_mqtt()
@@ -261,11 +255,11 @@ class MyListener(object):
 					write_conf('MQTT','server',MQTTServer)
 					write_conf('MQTT','port',MQTTPort)
 				except Exception,e:
-					logger.warning('[Mylistener.add_service]Failed to write mqtt new address back to conf file:%s,%s' % (MQTTServer,MQTTPort))
-					print "\033[1;31;40m failed to write back new mqtt server : %s:%s\033[0m" % (Exception,e)
+					logger.warning('[Mylistener.add_service]\033[1;33;40mFailed to write mqtt new address back to conf file:%s,%s\033[0m' % (MQTTServer,MQTTPort))
+					#print "\033[1;31;40m failed to write back new mqtt server : %s:%s\033[0m" % (Exception,e)
 			else:
-				logger.info('[MyListener.add_service]Failed to reconnect to new mqtt server:%s,%s'% (MQTTServer,MQTTPort))
-				print "\033[1;31;40m failed to reconnect to new mqtt server : %s:%s\033[0m" % (Exception,e)
+				logger.warning('[MyListener.add_service]\033[1;33;40mFailed to reconnect to new mqtt server:%s,%s\033[0m'% (MQTTServer,MQTTPort))
+				#print "\033[1;31;40m failed to reconnect to new mqtt server : %s:%s\033[0m" % (Exception,e)
 			
 def runcmd2(data):
 	
@@ -274,20 +268,21 @@ def runcmd2(data):
 	global cameraReviewed 
 	global hasCamera
 	#print "\033[0;32;40m looping in runcmd %s while \033[0m"  % (q,)
-	print "\033[0;32;40m runcmd2 get %s \033[0m"  % (data,)
+	#print "\033[0;32;40m runcmd2 get %s \033[0m"  % (data,)
 	if data.startswith('update'):
-		print "\033[0;32;40mget cmd as %s \033[0m" % (data,)
-		logger.info("[runcmd2]\033[0;32;40mget cmd as %s \033[0m" % (data,))
+		#print "\033[0;32;40mget cmd as %s \033[0m" % (data,)
+		logger.info("[runcmd2]get cmd \033[1;32;40m%s \033[0m" % (data,))
 		#parse args update -f[filename]* -m[md5_sum]* -i[ip/domain] -p[port]*  -r[random range] -v[version]*
 		ArgsDict = parseArgs2Dict(data.lstrip('update'))
 		if (not ArgsDict.has_key('f')) or (ArgsDict.has_key('i') and (not ArgsDict.has_key('p'))) or (not ArgsDict.has_key('v')) or (not ArgsDict.has_key('m')):
 			#shoule rase Exception ,return and exit
 			#print "Error: lack some para"
-			logger.warning('[runcmd2]update cmd lack some para: %s' % (data,))
+			logger.warning('[runcmd2]\033[1;33;40mupdate cmd lack some para: %s\033[0m' % (data,))
 			return 
 		try:
 			if float(ArgsDict['v']) > version:
-				print "\033[0;32;40m new version upgrade command received \033[0m"
+				#print "\033[0;32;40m new version upgrade command received \033[0m"
+				logger.info("[runcmd2]new version upgrade command received")
 				if not ArgsDict.has_key('i'):
 					ArgsDict['i'] = MQTTServer
 				if not ArgsDict.has_key('p'):
@@ -296,27 +291,26 @@ def runcmd2(data):
 					ArgsDict['r'] = 600
 				update_self(ArgsDict['f'],ArgsDict['m'],ArgsDict['v'],ArgsDict['i'],ArgsDict['p'],int(ArgsDict['r']))	
 			else:
-				print "033[0;32;40m current version : %f, order version :%f\033[0m " % (version,float(ArgsDict['v']))
-				logger.debug("[runcmd2]033[0;32;40m current version : %f, order version :%f\033[0m " % (version,float(ArgsDict['v'])))
+				logger.warning("[runcmd2]\033[1;33;40m current version : %f, order version :%f\033[0m " % (version,float(ArgsDict['v'])))
 		except Exception,e:
-			print "\033[0;32;40m runcmd2 judging params get %s:%s\033[0m"  % (Exception,e)
-			logger.warning('[runcmd2]judging params get %s:%s' % (Exception,e))
+			#print "\033[0;32;40m runcmd2 judging params get %s:%s\033[0m"  % (Exception,e)
+			logger.warning('[runcmd2]\033[1;33;40mjudging params get %s:%s\033[0m' % (Exception,e))
 	else :
 		try:
 			cmd = json.loads(data)
 		except Exception,e:
 			#print "\033[0;32;40m runcmd2 cannot cover cmd %s to json\033[0m" % (data,)
-			logger.warning('[runcmd2]cannot loads cmd to json:%s' % (data,))
+			logger.warning('[runcmd2]\033[1;33;40mcannot loads cmd to json:%s\033[0m' % (data,))
 
 		if cmd['cmd'] == 'capture' :
-			print "\033[0;32;40m runcmd2 capture cmd2 received\033[0m"
-			logger.debug('[runcmd2]received capture cmd:%s' % (data,))
+			#print "\033[0;32;40m runcmd2 capture cmd2 received\033[0m"
+			logger.info('[runcmd2]received capture cmd:%s' % (data,))
 			#get photo
 			if cmd['ap'] == stationAlias :
 				#print "\033[0;32;40m capture cmd2 received and going to capture\033[0m"
-				logger.debug('[rumcmd2]demanded to capture')
+				logger.info('[rumcmd2]demanded to capture')
 				#print "\033[0;32;40m H:%s, %s ; V:%s, %s\033[0m" % (picResolutionH,type(picResolutionH),picResolutionV,type(picResolutionV))
-				logger.debug("\033[0;32;40m H:%s, %s ; V:%s, %s\033[0m" % (picResolutionH,type(picResolutionH),picResolutionV,type(picResolutionV)))
+				logger.debug("[runcmd2]capture resolution:\033[1;32;40m H:%s, %s ; V:%s, %s\033[0m" % (picResolutionH,type(picResolutionH),picResolutionV,type(picResolutionV)))
 				now = int(time.time())
 				filename = '%s_%s.jpg' % (cmd['bracelet'],now)
 				#take_photo(filename,picUploadDir,picResolutionV,picResolutionH,cameraReviewed,hottime)
@@ -324,65 +318,77 @@ def runcmd2(data):
 				#if not cameraReviewed:
 				#	cameraReviewed = True
 				if hasCamera:
-					print "\033[0;32;40m has Camera and going to capture:\033[0m"
+					#print "\033[0;32;40m has Camera and going to capture:\033[0m"
 					try:
 						take_photo(filename,picUploadDir,picResolutionV,picResolutionH,cameraReviewed,hottime)
 						#print "\033[0;32;40m Capture ? %s " % (re,)
 					except Exception,e:
-						print "\033[0;32;40m Capture get Exception:%s:%s\033[0m" % (Exception,e)
-						logger.warning("[runcm2]Capture get Exception:%s:%s" % (Exception,e))
+						#print "\033[0;32;40m Capture get Exception:%s:%s\033[0m" % (Exception,e)
+						logger.warning("[runcm2]\033[1;33;40mCapture get Exception:%s:%s\033[0m" % (Exception,e))
 					else:
 						#print "\033[0;32;40m Capture ? %s " % (re,)
 						#if re:
-						logger.debug("[runcmd2]take photo suc")
+						logger.info("[runcmd2]take photo suc")
 						if cmd.has_key('url'):
 							res = send_photo_url(filename,picUploadDir,cmd['url'],now)	
 							if res:
-								logger.debug("[send_photo_url]suc")
+								logger.info("[send_photo_url]suc")
 							else:
-								logger.debug("[send_photo_url]suc")
+								logger.warning("[send_photo_url]\033[1;33;40mFailed\033[0m")
 						else:
 							res = send_photo(filename,picUploadDir,picUploadServer,picUploadPort,cmd['ap'],cmd['bracelet'],now)
 							if res:
-								logger.debug("[send_photo]suc")
+								logger.info("[send_photo]suc")
 							else:
-								logger.debug("[send_photo]suc")
+								logger.warning("[send_photo]\033[1;33;40mFailed\033[0m")
 							
-						print "\033[0;32;40msend_photo done\033[0m"
+						#print "\033[0;32;40msend_photo done\033[0m"
 						if not cameraReviewed:
 							cameraReviewed = True
 				else:
-					print "\033[0;32;40m no camera and ignore capture \033[0m"
-					#log sth 
+					#print "\033[0;32;40m no camera and ignore capture \033[0m"
+					logger.warning("[rumcmd2]\033[1;33;40m capture cmd got but I did't have a camera!\033[0m")
 					#return sth to server?
-					pass
 
 def update_self(filename,md5_sum,version,ip=MQTTServer,port=8000,ran=600):
 	global stationAlias
 	try:
 		rdl = download(filename,md5_sum,ip,port,ran)
 	except Exception,e:
-		print "download got error : %s, %s " % (Exception,e)
+		#print "download got error : %s, %s " % (Exception,e)
+		logger.warning("[update_self]\033[1;33;40m Download file %s got error: %s,%s\033[0m" % (filename,Exception,e))
+		#should report to server?
 		
 	if rdl['status'] == 'OK':
-		print "\033[0;32;40mDownload %s Successfully...\033[0m" % (filename,)
+		#print "\033[0;32;40mDownload %s Successfully...\033[0m" % (filename,)
+		logger.info("[update_self]Download file %s Successfully" % (filename,))
 		rdp = deploy(filename)
 		if rdp['status'] == 'OK':
-			print "\033[0;32;40mDeploy Successfully...\nPreparing to remove the %s restart the program...\033[0m" % (filename,)
-			if os.path.exists(filename):
-				os.remove(filename)
+			#print "\033[0;32;40mDeploy Successfully...\nPreparing to remove the %s restart the program...\033[0m" % (filename,)
+			logger.info("[update_self]Deploy Successfully.")
+			try:	
+				if os.path.exists(filename):
+					os.remove(filename)
+			except Exception,e:
+				logger.warning("[update_self]\033[1;33;40mException caught during reomove file%s:%s,%s]033[0m" % (filename,Exception,e))
+			else:
+				logger.info("[update_self]Removed file%s" % (filename,))
 			#write back the alias ID
-			write_conf('station','alias',stationAlias)
+			try:
+				write_conf('station','alias',stationAlias)
+			except Exception,e:	
+				logger.warning("[update_self]\033[1;33;40mcannot write stationAlias %s bakc to conf file \033[0m and going to restart raspi." % (stationAlias,))
+			else:
+				logger.info("[update_self]Wrote stationAlias %s back to conf file and going to call restart_raspi()" % (stationAlias,))
 			restart_raspi()
 			#restart_program()
 		else:
-			#TODO
-			#log sth
-			pass
+			logger.warning("[update_self]\033[1;33;40mFailed to deploy file %s.\033[0m" % (filename,))
+			#should report to server?
 	else:
-		#log sth
 		#TODO
-		pass
+		logger.warning("[update_self]\033[1;33;40mFailed to download file %s.\033[0m" % (filename,))
+		#should report to server?
 
 
 class MqttClient(threading.Thread):
@@ -406,15 +412,15 @@ class MqttClient(threading.Thread):
 		try:
 			client.connect(self.server,self.port,self.alivetime)
 		except Exception,e:
-			#log sth
-			print "\033[1;31;40mmqtt connect error (%s,%s) %s:%s\033[0m try reconnect" % (MQTTServer,MQTTPort,Exception,e)
+			#print "\033[1;31;40mmqtt connect error (%s,%s) %s:%s\033[0m try reconnect" % (MQTTServer,MQTTPort,Exception,e)
+			logger.warning("[MqttClient.run]\033[1;33;40m mqtt server %s:%s  connect error: %s,%s\033[0m and going to reconnect" % (MQTTServer,MQTTPort,Exception,e))
 			reconnect_mqtt()
 		while True:
 			try:
 				client.loop(timeout=self.timeout)
 			except Exception,e:
-				#log sth
-				print "\033[1;31;40mmqtt loop error (%s,%s) %s:%s\033[0m try reconnect" % (MQTTServer,MQTTPort,Exception,e)
+				#print "\033[1;31;40mmqtt loop error (%s,%s) %s:%s\033[0m try reconnect" % (MQTTServer,MQTTPort,Exception,e)
+				logger.warning("[MqttClient.run]\033[1;33;40mmqtt %s:%s loop wrror: %s,%s\033[0m and going to reconnect" % (MQTTServer,MQTTPort,Exception,e))
 				reconnect_mqtt()
 
 		
@@ -431,8 +437,10 @@ class heartBeat(threading.Thread):
 		global hasCamera
 		if has_camera():
 			hasCamera = True
+			logger.debug("[heartBeat.run]I got a camera!")
 		else:
 			hasCamera =False
+			logger.debug("[heartBeat.run]Oooops,I haven't got a camera")
 		while True:
 			nowtime = time.time()
 			heartbeat = get_system_info()
@@ -448,11 +456,12 @@ class heartBeat(threading.Thread):
 			try:
 				client.publish(HEARTBEATTITLE,json.dumps(heartbeat))
 				#print "\033[1;31;40mheartbeat  %s\033[0m" % (json.dumps(heartbeat),)
-				logger.debug("[heartbeat]\033[1;31;40m%s\033[0m"% (json.dumps(heartbeat)),)
 			except Exception,e:
 				#print "\033[1;31;40mMqtt Exception:%s\033[0m" % (Exception,e)
 				logger.warning("[heartbeat]\033[1;31;40mMqtt Exception:%s,%s\033[0m" % (json.dumps(heartbeat),))
 				reconnect_mqtt()
+			else:
+				logger.debug("[heartbeat]\033[1;34;40m%s\033[0m"% (json.dumps(heartbeat)),)
 			time.sleep(heartbeatSleeptime)
 if __name__=='__main__':
 	global starttime
@@ -485,23 +494,21 @@ if __name__=='__main__':
 		s.setblocking(0)
 	except socket.error as msg:
 		#print "socket error:%s" % (msg,)
-		logger.warning("[main]socket error %s" % (msg,))
+		logger.warning("[__main__]\033[1;33;40msocket error %s\033[0m" % (msg,))
 	reconnect_count = 0
 
 	lastDiscoveryTime=0
 	try:
 		callscanner = Scanner().withDelegate(ScanDelegate())
 	except Exception,e:
-		print "\033[0;32;40m main:BLEscanner init:%s,%s\033[0m"  % (Exception,e)
-		logger.warning("[main] BLEScan init error:%s,%s " % (Exception,e))
+		#print "\033[0;32;40m main:BLEscanner init:%s,%s\033[0m"  % (Exception,e)
+		logger.warning("[main]\033[1;33;40mBLEScan init error:%s,%s\033[0m" % (Exception,e))
 	count =0
 	
 	while True:
 		try:
 			devices = callscanner.scan(scannerScanTime)
-			logger.info("[main] log test")
 		except Exception,e:
-		#print e
-			print "\033[0;32;40m main:callscanner:scan %s,%s\033[0m and going to sleep 5s and scan again"  % (Exception,e)
-			logger.warning("[main]callscanner:scan %s,%s and going to sleep 5s and scan again" % (Exception,e))
+			#print "\033[0;32;40m main:callscanner:scan %s,%s\033[0m and going to sleep 5s and scan again"  % (Exception,e)
+			logger.warning("[main]\033[1;33;40mcallscanner:scan %s,%s and going to sleep 5s and scan again\033[0m" % (Exception,e))
 			time.sleep(5)
