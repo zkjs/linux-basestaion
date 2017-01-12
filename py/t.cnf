@@ -9,8 +9,8 @@ cmd_l = 100
 call_l = 100
 
 [MQTT]
-#server = 10-8-47-94.local.
-server = 192.168.1.135
+server = 10-8-47-94.local.
+#server = 192.168.1.135
 port = 1883
 position_t = position
 cmd_t = ap

@@ -28,20 +28,20 @@ logger_func = logging.getLogger('demo.func')
 	
 
 def get_ip_address(ifname):
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    #try to avoid net drop exceptions
-    try: 
-        res = socket.inet_ntoa(fcntl.ioctl(
-        s.fileno(),
-        0x8915,  # SIOCGIFADDR
-        struct.pack('256s', ifname[:15])
-    )[20:24])
-    except Exception,e:
+	s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	#try to avoid net drop exceptions
+	try: 
+		res = socket.inet_ntoa(fcntl.ioctl(
+		s.fileno(),
+		0x8915,  # SIOCGIFADDR
+		struct.pack('256s', ifname[:15])
+		)[20:24])
+	except Exception,e:
 		#print Exception,e
 		#print "\033[0;32;40m get_ip_address %s:%s %s\033[0m" % (ifname,Exception,e)
 		logger_func.warning("[get_ip_address]\033[1;33;40mget_ip_address(%s):%s,%s\033[0m" % (ifname,Exception,e))
 		res = '127.0.0.1'
-    return res
+	return res
 
 
 #def get_mac_address(*args): 
@@ -53,12 +53,12 @@ def get_ip_address(ifname):
 #    return deli.join([mac[e:e+2] for e in range(0,11,2)])
 
 def get_mac_address(st,*args):
-    a = os.popen('ifconfig | awk "/^' + st + '/{print \$5}"')
-    b = a.readline().rstrip()
-    if len(args)>0:
+	a = os.popen('ifconfig | awk "/^' + st + '/{print \$5}"')
+	b = a.readline().rstrip()
+	if len(args)>0:
 		deli = args[0]
 		return b.replace(':',deli)
-    return b.replace(':','')
+	return b.replace(':','')
 
 def get_ifname(st):
 	a = os.popen('ifconfig | awk "/^' + st + '/{print \$1}"')
@@ -66,16 +66,16 @@ def get_ifname(st):
     
 
 def checksum(b):
-    sum = 0
-    for e in b:
-        sum += e
-    cc = bytearray.fromhex('{:04x}'.format(sum))
-    b = bytearray([0])
-    n = cc[-1]
+	sum = 0
+	for e in b:
+		sum += e
+	cc = bytearray.fromhex('{:04x}'.format(sum))
+	b = bytearray([0])
+	n = cc[-1]
 #    b[1]= n & 0xFF
 #    n >>= 8
-    b[0]= n & 0xFF
-    return b
+	b[0]= n & 0xFF
+	return b
 
 def restart_program():  
     """Restarts the current program. 
@@ -88,34 +88,34 @@ def restart_program():
     #os.execl("/usr/bin/sudo",  python, * sys.argv)  
 
 def restart_raspi():
-    os.system('shutdown -r 1')
+	os.system('shutdown -r 1')
 
 
 def md5sum(fname):
-    """ 计算文件的MD5值
-    """
-    def read_chunks(fh):
-        fh.seek(0)
-        chunk = fh.read(8096)
-        while chunk:
-            yield chunk
-            chunk = fh.read(8096)
-        else: #最后要将游标放回文件开头
-            fh.seek(0)
-    m = hashlib.md5()
-    if isinstance(fname, basestring) \
-            and os.path.exists(fname):
-        with open(fname, "rb") as fh:
-            for chunk in read_chunks(fh):
-                m.update(chunk)
-    #上传的文件缓存 或 已打开的文件流
-    elif fname.__class__.__name__ in ["StringIO", "StringO"] \
-            or isinstance(fname, file):
-        for chunk in read_chunks(fname):
-            m.update(chunk)
-    else:
-        return ""
-    return m.hexdigest()
+	""" 计算文件的MD5值
+	"""
+	def read_chunks(fh):
+		fh.seek(0)
+		chunk = fh.read(8096)
+		while chunk:
+			yield chunk
+			chunk = fh.read(8096)
+		else: #最后要将游标放回文件开头
+			fh.seek(0)
+	m = hashlib.md5()
+	if isinstance(fname, basestring) \
+		and os.path.exists(fname):
+		with open(fname, "rb") as fh:
+			for chunk in read_chunks(fh):
+				m.update(chunk)
+	#上传的文件缓存 或 已打开的文件流
+	elif fname.__class__.__name__ in ["StringIO", "StringO"] \
+			or isinstance(fname, file):
+		for chunk in read_chunks(fname):
+			m.update(chunk)
+	else:
+		return ""
+	return m.hexdigest()
 
 def download(filename,md5_sum,ip,port,ran):
 	waittime = random.randrange(0,ran)
@@ -147,13 +147,13 @@ def download(filename,md5_sum,ip,port,ran):
 		return {'status':'Error','Info': 'md5 of file:%s , md5 providd:%s, doesn\'t match.' % (md5OfFile,md5_sum)}
 
 def extract(tar_path, target_path):
-    try:
-        tar = tarfile.open(tar_path, "r")
-        file_names = tar.getnames()
-        for file_name in file_names:
-            tar.extract(file_name, target_path)
-        tar.close()
-    except Exception, e:
+	try:
+		tar = tarfile.open(tar_path, "r")
+		file_names = tar.getnames()
+		for file_name in file_names:
+			tar.extract(file_name, target_path)
+		tar.close()
+	except Exception, e:
 		#print "\033[0;32;40m extract Exception:%s %s\033[0m" % (Exception,e)
 		logger_func.warning("[extract]\033[1;33;40mExtract %s:%s,%s\033[0m" % (file_name,Exception,e))
         #raise Exception, e
@@ -179,11 +179,11 @@ def parseArgs2Dict(cmd_line):
 	return args_hash
 
 def cur_file_dir():
-     path = sys.path[0]
-     if os.path.isdir(path):
-         return path
-     elif os.path.isfile(path):
-         return os.path.dirname(path)
+	path = sys.path[0]
+	if os.path.isdir(path):
+		return path
+	elif os.path.isfile(path):
+		return os.path.dirname(path)
 
 def take_photo(filename,filedir,picResolutionV,picResolutionH,cameraReviewed,hottime):
 	try:
@@ -226,18 +226,24 @@ def send_photo(filename,filedir,ip,port,bsid,bcid,now):
 		logger_func.error("[send_photo]\033[1;31;40mFailed to send photo %s:%s\033[0m" % (filename,res))
 		return False
 def send_photo_url(filename,filedir,url,now):
-	pic = open('%s/%s/%s' % (cur_file_dir(),filedir,filename))
+	logger_func.info("[send_photo_url]begin in send_photo_url")
+	try:
+		pic = open('%s/%s/%s' % (cur_file_dir(),filedir,filename))
+	except Exception,e:
+		logger_func.error("[send_photo_url]\033[1;31;40mCannot open file %s/%s/%s:%s,%s\033[0m" % (cur_file_dir(),filedir,filename,Exception,e))
+		return False
 	url_path ="%s%s" % (url,now)
 	#print "\033[1;31;40mURL:%s\033[0m" % (url_path,)
-	logger_func.debug("[send_photo_url]URL received:\033[1;32;40murl_path\033[0m" % (url_path,))
-	res = requests.post(url = url_path,
-                    data=pic,
-		    headers={'Content-Type': 'image/jpeg'})
+	logger_func.debug("[send_photo_url]URL received:\033[1;32;40m%s\033[0m" % (url_path,))
+	try:
+		res = requests.post(url = url_path, data=pic, headers={'Content-Type': 'image/jpeg'})
+	except Exception,e:
+		logger_func.error("[send_photo_url]\033[1;31;40mPost Exception:%s,%s\033[0m" % (Exception,e))
 	#print "\033[1;31;40m%s \033[0m " % (res,)
 	#print "\033[1;31;40m%s \033[0m " % (res.status_code,)
 	if res.status_code == 200 :
 		os.remove('%s/%s/%s' % (cur_file_dir(),filedir,filename))
-		logger_func.info("[send_photo_url]Send photo succ,status_code:%s" % (res.status_code,))
+		logger_func.info("[send_photo_url]Send photo succ,status_code:\033[1;32;40m%s\033[0m" % (res.status_code,))
 		logger_func.debug("[send_photo_url]send photo suc, res:%s" % (res,))
 		return True
 	else:
@@ -343,7 +349,7 @@ def get_system_info():
 	heartbeatInfo['os_uptime'] = "%s min" % (str(psutil.cpu_percent(interval=1)),)
 
 	#print json.dumps(heartbeatInfo,indent=4)
-        return heartbeatInfo
+	return heartbeatInfo
 
 
 def write_conf(node,key,value):
