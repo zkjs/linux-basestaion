@@ -53,4 +53,12 @@ upload_host = 10.8.47.29
 upload_port = 9090
 tmp_dir = jpeg
 
-
+[log]
+console_format = \%(asctime)s [\%(levelname)s] [\%(filename)s:\%(lineno)d \%(name)s] - \%(message)s
+file_format = \%(asctime)s [\%(levelname)s] [\%(filename)s:\%(lineno)d \%(name)s] - \%(message)s [\%(process)d,\%(thread)d:\%(threadName)s]'
+log_suffix = '%Y-%m-%d.log'
+log_extMatch_string = r"^\d{4}-\d{2}-\d{2}.log$"
+log_name = demo
+file_handler_when = D
+file_handler_interval = 1
+file_handler_backupcount = 7

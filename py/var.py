@@ -96,6 +96,19 @@ if conf.has_option('camera','resolution_v'):
 else:
 	picResolutionH = 1200
 
+###############################
+#
+#		log	
+#
+###############################
+#console_format = conf.get('log','console_format')
+#file_format = conf.get('log','console_format')
+log_suffix = conf.get('log','log_suffix')
+log_exMatch_string = conf.get('log','log_extMatch_string')
+log_name = conf.get('log','log_name')
+file_handler_when = conf.get('log','file_handler_when')
+file_handler_interval = int(conf.get('log','file_handler_interval'))
+file_handler_backupcount = int(conf.get('log','file_handler_backupcount'))
 
 
 #def write_conf(node,key,value):

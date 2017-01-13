@@ -17,38 +17,41 @@ import requests
 import picamera
 import json
 import re
-#from func import *
 
-import logging
-from logging.handlers import TimedRotatingFileHandler
-
-console = logging.StreamHandler()
-console.setLevel(logging.DEBUG)
-#console_formatter = logging.Formatter('%(name)-5s: %(levelname)-8s %(message)s')
-console_formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(filename)s:%(lineno)d %(name)s] - %(message)s')
-log_formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(filename)s:%(lineno)d %(name)s] - %(message)s [%(process)d,%(thread)d:%(threadName)s]')
-console.setFormatter(console_formatter)
-logger = logging.getLogger('demo')
-logger.addHandler(console)
-#Rthandler = RotatingFileHandler('demo.log',maxBytes=10*1024*1024,backupCount=5)
-Trthandler = TimedRotatingFileHandler(filename='demo',when='D',interval=1,backupCount=7)
-Trthandler.suffix = "%Y%m%d.log"
-#Trthandler.extMatch = re.compile(r"^\d{4}-\d{2}-\d{2}.log$")
-#Trthandler.extMatch = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-Trthandler.extMatch = r"^\d{4}-\d{2}-\d{2}$"
-
-Trthandler.setLevel(logging.INFO)
-Trthandler.setFormatter(log_formatter)
-logger.addHandler(Trthandler)
-logger.setLevel(logging.DEBUG)
 try:
 	from var import *
 	from func import *
 	from depdata import *
 	from depconfig import *
 except Exception,e:
-	logger.critical("\033[1;31;40mCannot import:%s,%s\033[0m" % (Exception,e))
+	#logger.critical("\033[1;31;40mCannot import:%s,%s\033[0m" % (Exception,e))
+	print "\033[1;31;40mCannot import neccessary file:%s,%s\033[0m" % (Exception,e)
 	quit()
+
+import logging
+from logging.handlers import TimedRotatingFileHandler
+
+#console_formatter = logging.Formatter('%(name)-5s: %(levelname)-8s %(message)s')
+#Rthandler = RotatingFileHandler('demo.log',maxBytes=10*1024*1024,backupCount=5)
+console = logging.StreamHandler()
+console.setLevel(logging.DEBUG)
+console_formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(filename)s:%(lineno)d %(name)s] - %(message)s')
+#console_formatter = logging.Formatter(console_format)
+file_formatter = logging.Formatter('%(asctime)s [%(levelname)s] [%(filename)s:%(lineno)d %(name)s] - %(message)s [%(process)d,%(thread)d:%(threadName)s]')
+#file_formatter = logging.Formatter(file_format)
+console.setFormatter(console_formatter)
+#logger = logging.getLogger('demo')
+logger = logging.getLogger('demo')
+logger.addHandler(console)
+Trthandler = TimedRotatingFileHandler(filename=cur_file_dir()+'/'+log_name,when=file_handler_when,interval=file_handler_interval,backupCount=file_handler_backupcount)
+#Trthandler.suffix = "%Y%m%d.log"
+Trthandler.suffix = log_suffix
+Trthandler.extMatch = r"^\d{4}-\d{2}-\d{2}.log$"
+
+Trthandler.setLevel(logging.INFO)
+Trthandler.setFormatter(file_formatter)
+logger.addHandler(Trthandler)
+logger.setLevel(logging.DEBUG)
 
 global stationAlias
 global reconnect_count
@@ -188,20 +191,20 @@ class ScanDelegate(DefaultDelegate):
 		if data['Manufacturer'].startswith(callFlag,6):
 			callData=data
 			callData['nursecall'] = True
-			logger.info("[ScanDelegate.handleDiscovery]\033[1;31;40mCall data\033[0mget:%s" % (json.dumps(callData),))
+			logger.info("[ScanDelegate.handleDiscovery]Call data get:%s" % (json.dumps(callData),))
 			#print "\033[1;31;40m%s\033[0m" % (json.dumps(callData,))
 			try:
 				client.publish(CALLTITLE,json.dumps(callData))
 			except Exception,e:
 				#print "\033[1;31;40mMqtt Exception:%s\033[0m" % (Exception,e)
-				logger.warning("[ScanDelegate.handleDiscovery]\033[1;33;40msending call data %s get %s:%s\033[0m and trying to reconnect" % (json.dumps(callData),Exception,e))
+				logger.warning("[ScanDelegate.handleDiscovery]\033[1;33;40msending call data %s to %s get %s:%s\033[0m and trying to reconnect" % (json.dumps(callData),CALLTITLE,Exception,e))
 				reconnect_mqtt()
 			else:
-				logger.info("[ScanDelegate.handleDiscovery]Call data sended %s,%s:%s" % (MQTTServer,MQTTPort,json.dumps(callData)))
+				logger.info("[ScanDelegate.handleDiscovery]\033[1;32;40mCall\033[0m data sended to %s(%s:%s):%s" % (CALLTITLE,MQTTServer,MQTTPort,json.dumps(callData)))
 			#lastDiscoveryTime = time.time()
 		elif data['Manufacturer'].startswith(outbodyFlag,6):
 			outbodyData = data
-			logger.info("[ScanDelegate.handleDiscovery]\033[1;33;40mOutbody data\033[0mget:%s" % (json.dumps(outbodyData),))
+			logger.info("[ScanDelegate.handleDiscovery]Outbody data get:%s" % (json.dumps(outbodyData),))
 			try:
 				client.publish(OUTBODYTITLE,json.dumps(outbodyData))
 			except Exception,e:
@@ -209,12 +212,13 @@ class ScanDelegate(DefaultDelegate):
 				logger.warning("[ScanDelegate.handleDiscovery]\033[1;33;40msending outbody data %s get %s:%s\033[0m and trying to reconnect" % (json.dumps(outbodyData),Exception,e))
 				reconnect_mqtt()
 			else:
-				logger.info("[ScanDelegate.handleDiscovery]Outbody data sended %s,%s:%s" % (MQTTServer,MQTTPort,json.dumps(outbodyData)))
+				logger.info("[ScanDelegate.handleDiscovery]\033[1;32;40mOutbody\033[0m data sended to %s(%s:%s):%s" % (OUTBODYTITLE,MQTTServer,MQTTPort,json.dumps(outbodyData)))
 			#lastDiscoveryTime = time.time()
 		#change to send to mqtt immidiately
 		#positionQ.put(json.dumps(data))
 		else:
-			logger.info("[ScanDelegate.handleDiscovery]\033[1;32;40mPosition data\033[0m get:%s" % (json.dumps(data),))
+			logger.info("[ScanDelegate.handleDiscovery]Position data get:%s" % (json.dumps(data),))
+			#logger.info("[ScanDelegate.handleDiscovery]Position data sended %s,%s:%s" % (MQTTServer,MQTTPort,json.dumps(data)))
 			try:
 				client.publish(POSITIONTITLE,json.dumps(data))
 			except Exception,e:
@@ -223,7 +227,7 @@ class ScanDelegate(DefaultDelegate):
 				reconnect_mqtt()
 			#print "%s,%s:%s" % (MQTTServer,MQTTPort,json.dumps(data))
 			else:
-				logger.info("[ScanDelegate.handleDiscovery]Position data sended %s,%s:%s" % (MQTTServer,MQTTPort,json.dumps(data)))
+				logger.info("[ScanDelegate.handleDiscovery]\033[1;32;40mPosition\033[0m data sended to %s(%s:%s)%s" % (POSITIONTITLE,MQTTServer,MQTTPort,json.dumps(data)))
 			#lastDiscoveryTime = time.time()
 
 def on_connect(client,userdata,flags,rc):
@@ -470,7 +474,7 @@ class heartBeat(threading.Thread):
 				logger.warning("[heartbeat]\033[1;31;40mMqtt Exception:%s,%s [%s]\033[0m" % (MQTTServer,MQTTPort,json.dumps(heartbeat)))
 				reconnect_mqtt()
 			else:
-				logger.debug("[heartbeat]\033[1;34;40m%s\033[0m"% (json.dumps(heartbeat)),)
+				logger.info("[heartbeat]\033[1;34;40m%s\033[0m"% (json.dumps(heartbeat)),)
 			time.sleep(heartbeatSleeptime)
 if __name__=='__main__':
 	global starttime
