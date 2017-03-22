@@ -6,6 +6,7 @@ from protobuilder import outputbuilder
 from func import *
 from var import *
 from depconfig import *
+import json
 #for json type data use : inbetween
 #::predefined values::
 BCTYPE00 = 'b00' 
@@ -101,6 +102,8 @@ def rawdata_translate(manufdata):
             flagdict['key'] = KEY_LOST
         elif keyflag == '70':
             flagdict['key'] = KEY_BINDING
+        else:
+            flagdict['key'] = KEY_HEARTBEAT
         #the alarm update count in later 
     elif bctype == BCTYPE01:
         statflag = manufdata[6:8]
@@ -134,8 +137,8 @@ def gen_bin_data(datadict):
 
 def gen_json_data(datadict):
     #this generate same json data type 4 two bc adv version
-    ssdata = outputbuilder(datadict['keyflag'], datadict['bsmacfull'], datadict['bcaddr'], 100, datadict['ip'], datadict['srssi'])
-
+    #ssdata = outputbuilder(datadict['keyflag'], datadict['bsmacfull'], datadict['bcaddr'], 100, datadict['ip'], datadict['srssi'])
+    ssdata = json.dumps(datadict)
     return ssdata
 
 def manu_filter(manudatabin):
@@ -149,6 +152,8 @@ def manu_filter(manudatabin):
     #if matches, return bcmanu = b00/b01
     elif manudatabin.startswith('01ff12'):
         return BCTYPE01
+    elif manudatabin.startswith('ff09ff0012'):
+        return BCTYPE00
     else:
         return False #if not matches supported bc adv packet
 

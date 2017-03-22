@@ -117,7 +117,7 @@ class ScanDelegate(DefaultDelegate):
 		timestamp = time.time()
 		global lastDiscoveryTime
 		global s
-                global dataddd  #assemble all data before the loop
+        global dataddd  #assemble all data before the loop
 		try:
 			for (adtype,desc,value) in dev.getScanData():
 				data[desc]=value
@@ -144,6 +144,7 @@ class ScanDelegate(DefaultDelegate):
                     dataddd['bcmac'] = dev.addr.replace(':','')
                     dataddd['rssi'] = hex(100+dev.rssi).lstrip('0x').rjust(2,'0')
                     dataddd['srssi'] = dev.rssi*(-1)
+					dataddd['Manufacturer'] = data['Manufacturer']
                     ## data type 
                     if depProt == 'B':
                     #print('%s' % dataddd)
@@ -152,13 +153,15 @@ class ScanDelegate(DefaultDelegate):
                     else:
                         load = gen_json_data(dataddd)
                     ## send type
-                    #if depNet == 'S':
-                    try:
-                        s.send(load)
-                        print('all xxx sent %s' % load)
-                    except socket.error as msg:
-                        print('socket error %s' % msg)
-                        reconnect()
+                    if depNet == 'S':
+                        try:
+                            s.send(load)
+                            print('all xxx sent %s' % load)
+                        except socket.error as msg:
+                            print('socket error %s' % msg)
+                            reconnect()
+					else:
+						client.publish('POSITIONTITLE', load)
                     ##Mqtt not processed
 
                 ## below is old codes
