@@ -111,18 +111,20 @@ def reconnect_mqtt():
 class ScanDelegate(DefaultDelegate):
         def __init__(self):
                 DefaultDelegate.__init__(self)
-    def handleDiscovery(self, dev, isNewDev, isNewData):
-        global stationAlias,stationMac
-        data = {}
-        timestamp = time.time()
-        global lastDiscoveryTime
-        global s
-        global dataddd  #assemble all data before the loop
-        try:
-            for (adtype,desc,value) in dev.getScanData():
-                data[desc]=value
-        except UnicodeDecodeError,e:
-            pass
+
+	def handleDiscovery(self, dev, isNewDev, isNewData):
+		global stationAlias,stationMac
+		data = {}
+		timestamp = time.time()
+		global lastDiscoveryTime
+		global s
+                global dataddd  #assemble all data before the loop
+		try:
+			for (adtype,desc,value) in dev.getScanData():
+				data[desc]=value
+		except UnicodeDecodeError,e:
+			pass
+
                 ##::here is new processing using depdata.py codes;
                 if (data.has_key('Manufacturer')) and ( manu_filter(data.get('Manufacturer')) ):
                     #if match the manufilter then start new processing:
@@ -144,7 +146,7 @@ class ScanDelegate(DefaultDelegate):
                     dataddd['bcmac'] = dev.addr.replace(':','')
                     dataddd['rssi'] = hex(100+dev.rssi).lstrip('0x').rjust(2,'0')
                     dataddd['srssi'] = dev.rssi*(-1)
-                    dataddd['Manufacturer'] = data['Manufacturer']
+		    dataddd['Manufacturer'] = data['Manufacturer']
                     ## data type 
                     if depProt == 'B':
                     #print('%s' % dataddd)
@@ -160,8 +162,8 @@ class ScanDelegate(DefaultDelegate):
                         except socket.error as msg:
                             print('socket error %s' % msg)
                             reconnect()
-                    else:
-                        client.publish(POSITIONTITLE, load)
+		    else:
+			client.publish(POSITIONTITLE, load)
                     ##Mqtt not processed
 
                 ## below is old codes
